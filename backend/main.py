@@ -15,8 +15,11 @@ from backend.auth import (
     check_role
 )
 
-# Initialize Database tables
-Base.metadata.create_all(bind=engine)
+# Initialize Database tables safely
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Database initialization notice: {e}")
 
 app = FastAPI(title="Synth Argentina Portal API")
 
@@ -372,18 +375,31 @@ def reject_user(user_id: int, current_user: User = Depends(get_current_user), db
     return {"message": f"Aprobación de {user.email} revocada"}
 
 # --- Serving Frontend ---
+import pathlib
 
-# Mount the static files directory
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+
+if FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 @app.get("/")
 def read_index():
-    return FileResponse("frontend/index.html")
+    index_file = FRONTEND_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return {"message": "Synth Argentina API is running"}
 
 @app.get("/login")
 def read_login():
-    return FileResponse("frontend/login.html")
+    login_file = FRONTEND_DIR / "login.html"
+    if login_file.exists():
+        return FileResponse(str(login_file))
+    return {"message": "Login page"}
 
 @app.get("/dashboard")
 def read_dashboard():
-    return FileResponse("frontend/dashboard.html")
+    dash_file = FRONTEND_DIR / "dashboard.html"
+    if dash_file.exists():
+        return FileResponse(str(dash_file))
+    return {"message": "Dashboard page"}
