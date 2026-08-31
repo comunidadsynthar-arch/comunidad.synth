@@ -384,6 +384,8 @@ if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 @app.get("/")
+@app.get("/index.html")
+@app.get("/frontend/index.html")
 def read_index():
     index_file = FRONTEND_DIR / "index.html"
     if index_file.exists():
@@ -391,6 +393,8 @@ def read_index():
     return {"message": "Synth Argentina API is running"}
 
 @app.get("/login")
+@app.get("/login.html")
+@app.get("/frontend/login.html")
 def read_login():
     login_file = FRONTEND_DIR / "login.html"
     if login_file.exists():
@@ -398,6 +402,8 @@ def read_login():
     return {"message": "Login page"}
 
 @app.get("/dashboard")
+@app.get("/dashboard.html")
+@app.get("/frontend/dashboard.html")
 def read_dashboard():
     dash_file = FRONTEND_DIR / "dashboard.html"
     if dash_file.exists():
