@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synth Argentina ⚡🎛️🇦🇷</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .synth-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col synth-grid">
+
+    <!-- Navbar -->
+    <header class="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <img src="/static/logo.jpg" alt="Logo" class="w-10 h-10 rounded-full border border-sky-500">
+                <span class="text-xl font-bold tracking-wider text-sky-400">SYNTH ARGENTINA</span>
+            </div>
+            <nav class="hidden md:flex space-x-6">
+                <a href="#pilares" class="hover:text-sky-400 transition">Pilares</a>
+                <a href="#propuesta" class="hover:text-sky-400 transition">Propuesta</a>
+                <a href="#contacto" class="hover:text-sky-400 transition">Contacto</a>
+            </nav>
+            <div>
+                <a href="/login" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-5 rounded-lg transition shadow-md shadow-sky-950">
+                    Ingresar Portal
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="max-w-4xl mx-auto px-4 py-20 text-center flex-grow flex flex-col justify-center items-center">
+        <img src="/static/logo.jpg" alt="Synth Argentina Logo" class="w-48 h-48 rounded-full mb-8 border-2 border-sky-400 shadow-xl shadow-sky-950/50">
+        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">
+            SYNTH <span class="text-sky-400">ARGENTINA</span>
+        </h1>
+        <p class="text-xl text-zinc-400 max-w-2xl mb-8">
+            El punto de encuentro para fabricantes, músicos, técnicos, desarrolladores, coleccionistas y apasionados de las máquinas de sonido en el país. ⚡🎛️🇦🇷
+        </p>
+        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            <a href="/login" class="bg-sky-600 hover:bg-sky-500 text-white font-bold text-lg py-3 px-8 rounded-xl transition shadow-lg shadow-sky-950/50">
+                Sumate como Marca o Músico
+            </a>
+            <a href="#pilares" class="border border-zinc-700 hover:border-sky-500 text-zinc-300 font-bold text-lg py-3 px-8 rounded-xl transition">
+                Saber Más
+            </a>
+        </div>
+    </section>
+
+    <!-- Pilares Section -->
+    <section id="pilares" class="bg-zinc-900/60 border-y border-zinc-800 py-20">
+        <div class="max-w-6xl mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-12 text-sky-400">Los Pilares del Encuentro</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                
+                <!-- Pilar 1 -->
+                <div class="bg-zinc-950 p-6 rounded-xl border border-zinc-800 hover:border-sky-500/50 transition">
+                    <div class="text-3xl mb-4">🔌</div>
+                    <h3 class="text-xl font-bold mb-2">Exposición y Demos</h3>
+                    <p class="text-zinc-400 text-sm">
+                        Stands y mesas de demo para que fabricantes locales, tiendas y desarrolladores expongan sus equipos y la gente pueda probarlos.
+                    </p>
+                </div>
+
+                <!-- Pilar 2 -->
+                <div class="bg-zinc-950 p-6 rounded-xl border border-zinc-800 hover:border-sky-500/50 transition">
+                    <div class="text-3xl mb-4">🏫</div>
+                    <h3 class="text-xl font-bold mb-2">Talleres y DIY</h3>
+                    <p class="text-zinc-400 text-sm">
+                        Espacios de capacitación, charlas introductorias a la síntesis y talleres prácticos de soldadura de módulos y sintetizadores.
+                    </p>
+                </div>
+
+                <!-- Pilar 3 -->
+                <div class="bg-zinc-950 p-6 rounded-xl border border-zinc-800 hover:border-sky-500/50 transition">
+                    <div class="text-3xl mb-4">🎙️</div>
+                    <h3 class="text-xl font-bold mb-2">Música en Vivo</h3>
+                    <p class="text-zinc-400 text-sm">
+                        Cronograma de live sets cortos, clínicas de sonido y jams comunitarias de sintetizadores modulares y hardware.
+                    </p>
+                </div>
+
+                <!-- Pilar 4 -->
+                <div class="bg-zinc-950 p-6 rounded-xl border border-zinc-800 hover:border-sky-500/50 transition">
+                    <div class="text-3xl mb-4">🔄</div>
+                    <h3 class="text-xl font-bold mb-2">Compra y Venta</h3>
+                    <p class="text-zinc-400 text-sm">
+                        Feria de usados y canjes directa entre entusiastas, asegurando un punto de encuentro confiable y físico para renovar setups.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Propuesta Intro -->
+    <section id="propuesta" class="max-w-4xl mx-auto px-4 py-20">
+        <div class="bg-gradient-to-r from-sky-950/40 via-zinc-900 to-zinc-900 p-8 rounded-2xl border border-zinc-800">
+            <h2 class="text-2xl md:text-3xl font-bold mb-4 text-sky-400">¿Por qué Synth Argentina?</h2>
+            <p class="text-zinc-300 leading-relaxed mb-6">
+                Tenemos la comunidad, los técnicos, los fabricantes y los músicos. Es hora de unificarlos en un solo espacio anual con identidad local. Este portal permite a la comunidad registrarse para coordinar la logística, el espacio requerido, los requisitos técnicos de los músicos y el apoyo económico del público interesado.
+            </p>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm font-semibold text-sky-500 uppercase tracking-wider">Último anuncio:</span>
+                <span class="text-zinc-400 text-sm">Se abren pre-registros organizadores y donaciones.</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contacto" class="border-t border-zinc-800 bg-zinc-950 py-10 mt-auto">
+        <div class="max-w-6xl mx-auto px-4 text-center text-zinc-500 text-sm">
+            <p class="mb-4">⚡ SYNTH ARGENTINA - Organización Comunitaria Independiente ⚡</p>
+            <p>2026. Todos los derechos reservados. Hecho por y para la escena local.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

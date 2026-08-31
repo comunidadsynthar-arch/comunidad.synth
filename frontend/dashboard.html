@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Synth Argentina ⚡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <header class="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <img src="/static/logo.jpg" alt="Logo" class="w-8 h-8 rounded-full border border-sky-500">
+                <span class="text-lg font-bold tracking-wider text-sky-400">SYNTH ARGENTINA</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <span id="user-display-name" class="block font-bold text-sm text-zinc-200">Usuario</span>
+                    <span id="user-display-role" class="inline-block px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-zinc-800 text-zinc-400 border border-zinc-700">Rol</span>
+                </div>
+                <button onclick="handleLogout()" class="border border-zinc-700 hover:border-rose-500 hover:text-rose-400 text-zinc-400 text-xs font-bold py-1.5 px-3 rounded-lg transition">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl w-full mx-auto px-4 py-8 flex-grow">
+        
+        <!-- Status alerts -->
+        <div id="dashboard-alert" class="hidden mb-6 p-4 rounded-xl border text-sm text-center"></div>
+
+        <!-- ==============================================
+             1. SELECCIÓN DE ROL (Para usuarios 'pending')
+             ============================================== -->
+        <section id="view-pending" class="hidden max-w-2xl mx-auto py-10">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-extrabold text-sky-400 mb-2">¡Te damos la bienvenida!</h2>
+                <p class="text-zinc-400">Para continuar, por favor seleccioná tu rol en la escena de Synth Argentina:</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Marca -->
+                <div onclick="selectRole('brand')" class="bg-zinc-900 border border-zinc-800 hover:border-sky-500 p-6 rounded-xl text-center cursor-pointer transition flex flex-col justify-between">
+                    <div>
+                        <div class="text-4xl mb-4">🔌</div>
+                        <h3 class="text-lg font-bold mb-2 text-zinc-100">Marca / Expositor</h3>
+                        <p class="text-zinc-400 text-xs leading-relaxed">
+                            Fabricás hardware, pedales, módulos, software o tenés una tienda y querés reservar un stand en la feria.
+                        </p>
+                    </div>
+                    <button class="w-full mt-6 bg-sky-950 border border-sky-800 text-sky-400 hover:bg-sky-900 font-bold py-2 rounded-lg text-xs transition">
+                        Seleccionar
+                    </button>
+                </div>
+
+                <!-- Musico -->
+                <div onclick="selectRole('musician')" class="bg-zinc-900 border border-zinc-800 hover:border-sky-500 p-6 rounded-xl text-center cursor-pointer transition flex flex-col justify-between">
+                    <div>
+                        <div class="text-4xl mb-4">🎙️</div>
+                        <h3 class="text-lg font-bold mb-2 text-zinc-100">Músico / Artista</h3>
+                        <p class="text-zinc-400 text-xs leading-relaxed">
+                            Querés tocar en vivo, dar una clínica, workshop o participar en las jams del escenario de showcases.
+                        </p>
+                    </div>
+                    <button class="w-full mt-6 bg-sky-950 border border-sky-800 text-sky-400 hover:bg-sky-900 font-bold py-2 rounded-lg text-xs transition">
+                        Seleccionar
+                    </button>
+                </div>
+
+                <!-- Donante -->
+                <div onclick="selectRole('donor')" class="bg-zinc-900 border border-zinc-800 hover:border-sky-500 p-6 rounded-xl text-center cursor-pointer transition flex flex-col justify-between">
+                    <div>
+                        <div class="text-4xl mb-4">💙</div>
+                        <h3 class="text-lg font-bold mb-2 text-zinc-100">Donador / Público</h3>
+                        <p class="text-zinc-400 text-xs leading-relaxed">
+                            Querés apoyar económicamente a los organizadores para cubrir los costos del lugar y logística del evento.
+                        </p>
+                    </div>
+                    <button class="w-full mt-6 bg-sky-950 border border-sky-800 text-sky-400 hover:bg-sky-900 font-bold py-2 rounded-lg text-xs transition">
+                        Seleccionar
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==============================================
+             2. PANEL DE MARCA / EXPOSITOR
+             ============================================== -->
+        <section id="view-brand" class="hidden max-w-2xl mx-auto">
+            <!-- Approval Alert -->
+            <div id="brand-approval-status" class="mb-6 p-4 rounded-xl border text-sm text-center"></div>
+
+            <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl">
+                <h2 class="text-xl font-bold mb-2 text-sky-400">Perfil de Expositor / Marca</h2>
+                <p class="text-zinc-400 text-xs mb-6">Completá los datos de tu proyecto para coordinar el stand en la exposición.</p>
+
+                <form id="form-brand" onsubmit="saveBrandProfile(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-zinc-400 text-xs font-semibold mb-1">Nombre de la Marca *</label>
+                        <input type="text" id="brand-name" required class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-zinc-400 text-xs font-semibold mb-1">Sitio Web / Red Social</label>
+                            <input type="text" id="brand-website" placeholder="Ej. www.instagram.com/marca" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                        </div>
+                        <div>
+                            <label class="block text-zinc-400 text-xs font-semibold mb-1">Espacio Requerido (m² estimados) *</label>
+                            <input type="number" step="0.5" min="0.5" id="brand-space" required class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 text-xs font-semibold mb-1">Requerimientos de Electricidad *</label>
+                        <select id="brand-electricity" required class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500 text-zinc-300">
+                            <option value="Bajo (100W)">Bajo (Sintetizador portátil, cargador, notebook)</option>
+                            <option value="Medio (500W)">Medio (Modular case grande, mezcladora, amplificador chico)</option>
+                            <option value="Alto (1000W+)">Alto (Múltiples equipos, bafle amplificado grande)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 text-xs font-semibold mb-1">Descripción del Proyecto</label>
+                        <textarea id="brand-desc" rows="3" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 text-xs font-semibold mb-1">Productos a Exponer (Ej. sintetizadores analógicos, módulos eurorack, pedales)</label>
+                        <input type="text" id="brand-products" placeholder="Sintetizadores, módulos Eurorack, accesorios..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                    </div>
+                    <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 px-4 rounded-lg transition text-sm">
+                        Guardar Perfil de Marca
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ==============================================
+             3. PANEL DE MÚSICO / ARTISTA
+             ============================================== -->
+        <section id="view-musician" class="hidden max-w-2xl mx-auto">
+            <!-- Approval Alert -->
+            <div id="musician-approval-status" class="mb-6 p-4 rounded-xl border text-sm text-center"></div>
+
+            <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl">
+                <h2 class="text-xl font-bold mb-2 text-sky-400">Perfil de Músico / Artista</h2>
+                <p class="text-zinc-400 text-xs mb-6">Completá tus datos artísticos y requerimientos para tu presentación o charla.</p>
+
+                <form id="form-musician" onsubmit="saveMusicianProfile(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-zinc-400 text-xs font-semibold mb-1">Nombre Artístico / Proyecto *</label>
+                            <input type="text" id="musician-name" required class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                        </div>
+                        <div>
+                            <label class="block text-zinc-400 text-xs font-semibold mb-1">Género / Estilo *</label>
+                            <input type="text" id="musician-genre" placeholder="Ej. Ambient, IDM, Techno, Noise" required class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 text-xs font-semibold mb-1">Enlaces a tu música (Bandcamp, SoundCloud, Spotify, Instagram)</label>
+                        <input type="text" id="musician-links" placeholder="Links separados por comas" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 text-xs font-semibold mb-1">Biografía</label>
+                        <textarea id="musician-bio" rows="3" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 text-xs font-semibold mb-1">Setup de Instrumentos (Equipos que traes para tocar)</label>
+                        <textarea id="musician-setup" rows="2" placeholder="Ej. Case Eurorack 6U, Korg Volca, Drum Machine..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 text-xs font-semibold mb-1">Rider Técnico Básico (Ej. 2 salidas XLR, mesa auxiliar, electricidad)</label>
+                        <input type="text" id="musician-rider" placeholder="Entradas de línea, tomacorrientes..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                    </div>
+                    <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 px-4 rounded-lg transition text-sm">
+                        Guardar Perfil de Artista
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ==============================================
+             4. PANEL DE DONANTE / PÚBLICO
+             ============================================== -->
+        <section id="view-donor" class="hidden max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <!-- Donate Card -->
+            <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl md:col-span-1 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-xl font-bold mb-2 text-sky-400">Apoyar a Synth Argentina</h2>
+                    <p class="text-zinc-400 text-xs mb-6">
+                        Tus aportes ayudan a costear el alquiler de la locación, el transporte de equipos comunitarios y la organización del encuentro.
+                    </p>
+
+                    <div class="space-y-3 mb-6">
+                        <button onclick="donateAmount(5000)" class="w-full border border-zinc-700 hover:border-sky-500 hover:bg-sky-950/20 font-bold py-2 rounded-lg text-sm transition">
+                            Donar $5.000 ARS
+                        </button>
+                        <button onclick="donateAmount(10000)" class="w-full border border-zinc-700 hover:border-sky-500 hover:bg-sky-950/20 font-bold py-2 rounded-lg text-sm transition">
+                            Donar $10.000 ARS
+                        </button>
+                        <button onclick="donateAmount(25000)" class="w-full border border-zinc-700 hover:border-sky-500 hover:bg-sky-950/20 font-bold py-2 rounded-lg text-sm transition">
+                            Donar $25.000 ARS
+                        </button>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <input type="number" id="custom-donation" placeholder="Monto personalizado" min="1000" class="flex-grow bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                        <button onclick="donateCustom()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition">
+                            Enviar
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-8 text-center text-[10px] text-zinc-500">
+                    Las donaciones en esta fase son simuladas (mock) para propósitos de demostración.
+                </div>
+            </div>
+
+            <!-- Donations List -->
+            <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl md:col-span-2">
+                <h2 class="text-xl font-bold mb-4 text-zinc-100">Mis Contribuciones</h2>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-zinc-300">
+                        <thead class="text-zinc-400 border-b border-zinc-800">
+                            <tr>
+                                <th class="pb-3">Fecha</th>
+                                <th class="pb-3">Monto</th>
+                                <th class="pb-3 text-right">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="my-donations-tbody" class="divide-y divide-zinc-800">
+                            <!-- JS injected rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==============================================
+             5. PANEL DE ADMINISTRADOR
+             ============================================== -->
+        <section id="view-admin" class="hidden space-y-8">
+            
+            <!-- Dashboard Stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                <!-- Stat 1 -->
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
+                    <span class="text-zinc-500 text-xs font-bold uppercase tracking-wider">Marcas Registradas</span>
+                    <span id="stat-brands" class="block text-3xl font-extrabold text-sky-400 mt-2">0</span>
+                </div>
+                <!-- Stat 2 -->
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
+                    <span class="text-zinc-500 text-xs font-bold uppercase tracking-wider">Músicos Registrados</span>
+                    <span id="stat-musicians" class="block text-3xl font-extrabold text-sky-400 mt-2">0</span>
+                </div>
+                <!-- Stat 3 -->
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
+                    <span class="text-zinc-500 text-xs font-bold uppercase tracking-wider">Espacio Solicitado (m²)</span>
+                    <span id="stat-space" class="block text-3xl font-extrabold text-sky-400 mt-2">0 m²</span>
+                </div>
+                <!-- Stat 4 -->
+                <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
+                    <span class="text-zinc-500 text-xs font-bold uppercase tracking-wider">Fondo Recaudado (Donaciones)</span>
+                    <span id="stat-funds" class="block text-3xl font-extrabold text-sky-400 mt-2">$0 ARS</span>
+                </div>
+            </div>
+
+            <!-- List of Registrations and Approvals -->
+            <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl">
+                <h2 class="text-xl font-bold mb-6 text-zinc-100">Control de Admisiones (Expositores y Artistas)</h2>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-zinc-300">
+                        <thead class="text-zinc-400 border-b border-zinc-800">
+                            <tr>
+                                <th class="pb-3">Proyecto / Expositor</th>
+                                <th class="pb-3">Contacto</th>
+                                <th class="pb-3">Detalles</th>
+                                <th class="pb-3">Estado</th>
+                                <th class="pb-3 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registrations-tbody" class="divide-y divide-zinc-800">
+                            <!-- Dynamic admin rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800 bg-zinc-900 py-6 text-center text-zinc-500 text-xs">
+        ⚡ Panel del Portal de Synth Argentina 2026.
+    </footer>
+
+    <!-- Load Dashboard JS logic -->
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
