@@ -1,6 +1,9 @@
+import os
+import pathlib
 from fastapi import FastAPI, Depends, HTTPException, status, Response, Cookie
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Optional
@@ -21,9 +24,7 @@ try:
 except Exception as e:
     print(f"Database initialization notice: {e}")
 
-from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI(title="Synth Argentina Portal API")
+app = FastAPI(title="Synth Argentina Portal API", redirect_slashes=False)
 
 # Add CORS middleware
 app.add_middleware(
@@ -65,9 +66,10 @@ class MusicianProfileRequest(BaseModel):
 class DonationRequest(BaseModel):
     amount: float
 
-# --- Authentication Routes ---
+# --- Authentication Routes (Dual Decorators for Vercel Serverless) ---
 
 @app.post("/api/auth/google")
+@app.post("/auth/google")
 def auth_google(auth_req: GoogleAuthRequest, response: Response, db: Session = Depends(get_db)):
     # Verify Google token
     token_info = verify_google_token(auth_req.id_token)
@@ -105,7 +107,7 @@ def auth_google(auth_req: GoogleAuthRequest, response: Response, db: Session = D
         httponly=True,
         max_age=86400, # 1 day in seconds
         samesite="lax",
-        secure=False  # Set to True in production with HTTPS
+        secure=False
     )
     
     return {
@@ -116,6 +118,7 @@ def auth_google(auth_req: GoogleAuthRequest, response: Response, db: Session = D
     }
 
 @app.post("/api/auth/mock")
+@app.post("/auth/mock")
 def auth_mock(auth_req: MockAuthRequest, response: Response, db: Session = Depends(get_db)):
     """Mock authentication endpoint for local development without Google configuration"""
     email = auth_req.email.strip().lower()
@@ -136,10 +139,9 @@ def auth_mock(auth_req: MockAuthRequest, response: Response, db: Session = Depen
         db.commit()
         db.refresh(user)
     else:
-        # If user exists and role was requested, update role (for easy testing switching)
+        # If user exists and role was requested, update role
         if role != "pending" and user.role != role:
             user.role = role
-            # Auto-approve admin and donor
             user.is_approved = (role in ["admin", "donor", "pending"])
             db.commit()
             db.refresh(user)
@@ -163,11 +165,13 @@ def auth_mock(auth_req: MockAuthRequest, response: Response, db: Session = Depen
     }
 
 @app.post("/api/auth/logout")
+@app.post("/auth/logout")
 def logout(response: Response):
     response.delete_cookie(key="session_token")
     return {"message": "Sesión cerrada correctamente"}
 
 @app.get("/api/auth/me")
+@app.get("/auth/me")
 def get_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = None
     if current_user.role == "brand" and current_user.brand_profile:
@@ -198,6 +202,7 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
     }
 
 @app.post("/api/auth/select-role")
+@app.post("/auth/select-role")
 def select_role(role_req: SelectRoleRequest, response: Response, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != "pending":
         raise HTTPException(
@@ -210,12 +215,10 @@ def select_role(role_req: SelectRoleRequest, response: Response, current_user: U
         raise HTTPException(status_code=400, detail="Rol inválido")
         
     current_user.role = requested_role
-    # Donors are auto-approved, brands/musicians require admin approval
     current_user.is_approved = (requested_role == "donor")
     db.commit()
     db.refresh(current_user)
     
-    # Re-issue JWT token with the new role
     access_token = create_access_token(data={"email": current_user.email, "role": current_user.role})
     response.set_cookie(
         key="session_token",
@@ -231,6 +234,7 @@ def select_role(role_req: SelectRoleRequest, response: Response, current_user: U
 # --- Profiles registration ---
 
 @app.post("/api/profile/brand")
+@app.post("/profile/brand")
 def save_brand_profile(profile_req: BrandProfileRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     check_role(current_user, ["brand"])
     
@@ -250,6 +254,7 @@ def save_brand_profile(profile_req: BrandProfileRequest, current_user: User = De
     return {"message": "Perfil de marca guardado correctamente. Pendiente de aprobación por administración."}
 
 @app.post("/api/profile/musician")
+@app.post("/profile/musician")
 def save_musician_profile(profile_req: MusicianProfileRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     check_role(current_user, ["musician"])
     
@@ -271,14 +276,15 @@ def save_musician_profile(profile_req: MusicianProfileRequest, current_user: Use
 # --- Donations Routes ---
 
 @app.post("/api/donations/create")
+@app.post("/donations/create")
 def create_donation(don_req: DonationRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    check_role(current_user, ["donor", "admin", "brand", "musician"]) # Anyone can donate
+    check_role(current_user, ["donor", "admin", "brand", "musician"])
     
     donation = Donation(
         user_id=current_user.id,
         amount=don_req.amount,
         currency="ARS",
-        status="completed" # Mock completed status
+        status="completed"
     )
     db.add(donation)
     db.commit()
@@ -287,6 +293,7 @@ def create_donation(don_req: DonationRequest, current_user: User = Depends(get_c
     return {"message": "¡Donación registrada con éxito! Muchas gracias por apoyar a la escena.", "amount": donation.amount}
 
 @app.get("/api/donations/my")
+@app.get("/donations/my")
 def get_my_donations(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     donations = db.query(Donation).filter(Donation.user_id == current_user.id).order_by(Donation.created_at.desc()).all()
     return [{
@@ -299,6 +306,7 @@ def get_my_donations(current_user: User = Depends(get_current_user), db: Session
 # --- Admin Routes ---
 
 @app.get("/api/admin/stats")
+@app.get("/admin/stats")
 def get_admin_stats(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     check_role(current_user, ["admin"])
     
@@ -306,10 +314,7 @@ def get_admin_stats(current_user: User = Depends(get_current_user), db: Session 
     total_brands = db.query(BrandProfile).count()
     total_musicians = db.query(MusicianProfile).count()
     
-    # Calculate total space requested
     total_space = db.query(func.sum(BrandProfile.space_requested)).scalar() or 0.0
-    
-    # Calculate total donations
     total_donations = db.query(func.sum(Donation.amount)).filter(Donation.status == "completed").scalar() or 0.0
     
     return {
@@ -321,6 +326,7 @@ def get_admin_stats(current_user: User = Depends(get_current_user), db: Session 
     }
 
 @app.get("/api/admin/registrations")
+@app.get("/admin/registrations")
 def get_registrations(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     check_role(current_user, ["admin"])
     
@@ -347,7 +353,7 @@ def get_registrations(current_user: User = Depends(get_current_user), db: Sessio
                 "setup_description": u.musician_profile.setup_description
             }
         else:
-            continue  # Skip if they haven't filled out profiles yet
+            continue
             
         results.append({
             "user_id": u.id,
@@ -362,6 +368,7 @@ def get_registrations(current_user: User = Depends(get_current_user), db: Sessio
     return results
 
 @app.post("/api/admin/approve/{user_id}")
+@app.post("/admin/approve/{user_id}")
 def approve_user(user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     check_role(current_user, ["admin"])
     
@@ -374,6 +381,7 @@ def approve_user(user_id: int, current_user: User = Depends(get_current_user), d
     return {"message": f"Usuario {user.email} aprobado con éxito"}
 
 @app.post("/api/admin/reject/{user_id}")
+@app.post("/admin/reject/{user_id}")
 def reject_user(user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     check_role(current_user, ["admin"])
     
@@ -385,38 +393,53 @@ def reject_user(user_id: int, current_user: User = Depends(get_current_user), db
     db.commit()
     return {"message": f"Aprobación de {user.email} revocada"}
 
-# --- Serving Frontend ---
-import pathlib
+# --- Serving Frontend & Fallbacks ---
 
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
+PUBLIC_DIR = BASE_DIR / "public"
 
-if FRONTEND_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+SERVE_DIR = PUBLIC_DIR if PUBLIC_DIR.exists() else FRONTEND_DIR
+
+if SERVE_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(SERVE_DIR)), name="static")
 
 @app.get("/")
 @app.get("/index.html")
-@app.get("/frontend/index.html")
 def read_index():
-    index_file = FRONTEND_DIR / "index.html"
+    index_file = SERVE_DIR / "index.html"
     if index_file.exists():
         return FileResponse(str(index_file))
     return {"message": "Synth Argentina API is running"}
 
 @app.get("/login")
 @app.get("/login.html")
-@app.get("/frontend/login.html")
 def read_login():
-    login_file = FRONTEND_DIR / "login.html"
+    login_file = SERVE_DIR / "login.html"
     if login_file.exists():
         return FileResponse(str(login_file))
     return {"message": "Login page"}
 
 @app.get("/dashboard")
 @app.get("/dashboard.html")
-@app.get("/frontend/dashboard.html")
 def read_dashboard():
-    dash_file = FRONTEND_DIR / "dashboard.html"
+    dash_file = SERVE_DIR / "dashboard.html"
     if dash_file.exists():
         return FileResponse(str(dash_file))
     return {"message": "Dashboard page"}
+
+@app.get("/privacidad")
+@app.get("/privacidad.html")
+def read_privacidad():
+    priv_file = SERVE_DIR / "privacidad.html"
+    if priv_file.exists():
+        return FileResponse(str(priv_file))
+    return {"message": "Política de Privacidad"}
+
+@app.get("/terminos")
+@app.get("/terminos.html")
+def read_terminos():
+    term_file = SERVE_DIR / "terminos.html"
+    if term_file.exists():
+        return FileResponse(str(term_file))
+    return {"message": "Condiciones del Servicio"}

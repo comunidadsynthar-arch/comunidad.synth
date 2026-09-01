@@ -42,9 +42,10 @@ def verify_google_token(id_token: str) -> dict:
                 print(f"Google token verification error: {token_info}")
                 return None
                 
-            # If Google Client ID is configured, verify the audience (aud)
-            if GOOGLE_CLIENT_ID and token_info.get("aud") != GOOGLE_CLIENT_ID:
-                print(f"Google token audience mismatch: {token_info.get('aud')} vs {GOOGLE_CLIENT_ID}")
+            # If Google Client ID is configured, verify audience (aud or azp)
+            token_aud = token_info.get("aud") or token_info.get("azp")
+            if GOOGLE_CLIENT_ID and token_aud != GOOGLE_CLIENT_ID:
+                print(f"Google token audience mismatch: {token_aud} vs {GOOGLE_CLIENT_ID}")
                 return None
                 
             return token_info
