@@ -1,0 +1,28 @@
+/* Custom Synth Argentina Stylesheet */
+
+/* Custom scrollbars for a clean dark look */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #09090b; /* zinc-950 */
+}
+
+::-webkit-scrollbar-thumb {
+    background: #27272a; /* zinc-800 */
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #0ea5e9; /* sky-500 */
+}
+
+/* Grid background helper */
+.synth-grid {
+    background-size: 40px 40px;
+    background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingreso - Synth Argentina ⚡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Identity Services Library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col justify-center items-center px-4">
+
+    <!-- Container -->
+    <div class="max-w-md w-full bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-xl">
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <a href="/">
+                <img src="/static/logo.jpg" alt="Logo" class="w-16 h-16 rounded-full mx-auto mb-4 border border-sky-500">
+            </a>
+            <h1 class="text-2xl font-bold tracking-wide">Portal Synth Argentina</h1>
+            <p class="text-zinc-400 text-sm mt-1">Registrate y gestioná tu participación</p>
+        </div>
+
+        <!-- System Message -->
+        <div id="status-msg" class="hidden mb-6 p-4 rounded-lg text-sm text-center"></div>
+
+        <!-- Google OAuth Form -->
+        <div class="mb-6">
+            <div id="g_id_onload"
+                 data-client_id="YOUR_GOOGLE_CLIENT_ID" 
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-shape="rectangular"
+                 data-theme="filled_blue"
+                 data-text="signin_with"
+                 data-size="large"
+                 data-logo_alignment="left"
+                 data-width="100%">
+            </div>
+        </div>
+
+        <!-- Separator -->
+        <div class="flex items-center my-6">
+            <div class="flex-grow border-t border-zinc-800"></div>
+            <span class="px-3 text-zinc-500 text-xs uppercase tracking-wider">Entorno de Desarrollo</span>
+            <div class="flex-grow border-t border-zinc-800"></div>
+        </div>
+
+        <!-- Mock Login / Local Testing -->
+        <div class="bg-zinc-950 p-6 rounded-xl border border-zinc-800">
+            <h3 class="text-sm font-semibold text-sky-400 uppercase tracking-wider mb-4 text-center">Ingresar sin credenciales (Mock)</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-zinc-400 text-xs font-semibold mb-1">Nombre Completo</label>
+                    <input type="text" id="mock-name" placeholder="Ej. Gustavo Silveira" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                </div>
+                <div>
+                    <label class="block text-zinc-400 text-xs font-semibold mb-1">Email</label>
+                    <input type="email" id="mock-email" placeholder="Ej. gs@music.com" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500">
+                </div>
+                <div>
+                    <label class="block text-zinc-400 text-xs font-semibold mb-1">Rol a testear</label>
+                    <select id="mock-role" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-sky-500 text-zinc-300">
+                        <option value="pending">Registrarse Nuevo (Pedir Rol)</option>
+                        <option value="musician">Músico (Proyecto / Setup / Rider)</option>
+                        <option value="brand">Marca (Fabricante / Espacio / Electricidad)</option>
+                        <option value="donor">Donante (Apoyar a la escena)</option>
+                        <option value="admin">Administrador (Gestión general / Aprobación)</option>
+                    </select>
+                </div>
+                <button onclick="handleMockLogin()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-4 rounded-lg transition text-sm">
+                    Ingresar
+                </button>
+            </div>
+        </div>
+
+        <div class="text-center mt-6">
+            <a href="/" class="text-zinc-500 hover:text-sky-400 text-xs transition">← Volver al inicio</a>
+        </div>
+
+    </div>
+
+    <!-- Scripting for Login -->
+    <script>
+        function showMessage(msg, type = 'error') {
+            const container = document.getElementById('status-msg');
+            container.textContent = msg;
+            container.className = `mb-6 p-4 rounded-lg text-sm text-center ${
+                type === 'success' ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-800' : 'bg-rose-950/50 text-rose-400 border border-rose-800'
+            }`;
+        }
+
+        // Mock Login Handler
+        async function handleMockLogin() {
+            const name = document.getElementById('mock-name').value.trim();
+            const email = document.getElementById('mock-email').value.trim();
+            const role = document.getElementById('mock-role').value;
+
+            if (!name || !email) {
+                showMessage("Por favor, completa nombre y email para simular el ingreso.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/mock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, name, role })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showMessage("Sesión iniciada con éxito", "success");
+                    
+                    // Route to dashboard
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 800);
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || "Error en el login.");
+                }
+            } catch (err) {
+                showMessage("No se pudo conectar con el servidor.");
+            }
+        }
+
+        // Google Sign-In Callback Handler
+        async function handleCredentialResponse(googleResponse) {
+            const idToken = googleResponse.credential;
+            
+            try {
+                const response = await fetch('/api/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_token: idToken })
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    showMessage(`Bienvenido, ${user.name}!`, "success");
+                    
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 800);
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || "Error al autenticar con Google.");
+                }
+            } catch (err) {
+                showMessage("Error de red al conectar con el backend.");
+            }
+        }
+    </script>
+</body>
+</html>
