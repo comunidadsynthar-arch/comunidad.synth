@@ -71,98 +71,119 @@ class DonationRequest(BaseModel):
 @app.post("/api/auth/google")
 @app.post("/auth/google")
 def auth_google(auth_req: GoogleAuthRequest, response: Response, db: Session = Depends(get_db)):
-    # Verify Google token
-    token_info = verify_google_token(auth_req.id_token)
-    if not token_info:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token de Google inválido"
+    try:
+        # Verify Google token
+        token_info = verify_google_token(auth_req.id_token)
+        if not token_info:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token de Google inválido o no reconocido"
+            )
+            
+        email = token_info.get("email")
+        name = token_info.get("name", "")
+        google_id = token_info.get("sub")
+        
+        # Check if user exists
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            # Create new user, defaults to 'pending' role until chosen
+            user = User(email=email, full_name=name, google_id=google_id, role="pending")
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        elif google_id and not user.google_id:
+            # Link google id if not already linked
+            user.google_id = google_id
+            db.commit()
+            db.refresh(user)
+
+        # Generate local JWT
+        access_token = create_access_token(data={"email": user.email, "role": user.role})
+        
+        # Save JWT in HttpOnly Cookie
+        response.set_cookie(
+            key="session_token",
+            value=access_token,
+            httponly=True,
+            max_age=86400, # 1 day in seconds
+            samesite="lax",
+            secure=False
         )
         
-    email = token_info.get("email")
-    name = token_info.get("name", "")
-    google_id = token_info.get("sub")
-    
-    # Check if user exists
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        # Create new user, defaults to 'pending' role until chosen
-        user = User(email=email, full_name=name, google_id=google_id, role="pending")
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    elif google_id and not user.google_id:
-        # Link google id if not already linked
-        user.google_id = google_id
-        db.commit()
-        db.refresh(user)
+        return {
+            "email": user.email,
+            "name": user.full_name,
+            "role": user.role,
+            "is_approved": user.is_approved
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        return Response(content=f"ERROR: {str(e)}\n{traceback.format_exc()}", status_code=500, media_type="text/plain")
 
-    # Generate local JWT
-    access_token = create_access_token(data={"email": user.email, "role": user.role})
-    
-    # Save JWT in HttpOnly Cookie
-    response.set_cookie(
-        key="session_token",
-        value=access_token,
-        httponly=True,
-        max_age=86400, # 1 day in seconds
-        samesite="lax",
-        secure=False
-    )
-    
-    return {
-        "email": user.email,
-        "name": user.full_name,
-        "role": user.role,
-        "is_approved": user.is_approved
-    }
+@app.get("/health")
+def health_check(db: Session = Depends(get_db)):
+    try:
+        user_count = db.query(User).count()
+        db_raw = os.getenv("DATABASE_URL", "not_set")
+        db_masked = db_raw[:15] + "..." if len(db_raw) > 15 else db_raw
+        return {"status": "ok", "db": "connected", "user_count": user_count, "db_url_prefix": db_masked}
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
 
 @app.post("/api/auth/mock")
 @app.post("/auth/mock")
 def auth_mock(auth_req: MockAuthRequest, response: Response, db: Session = Depends(get_db)):
     """Mock authentication endpoint for local development without Google configuration"""
-    email = auth_req.email.strip().lower()
-    name = auth_req.name.strip()
-    role = auth_req.role
-    
-    if not email:
-        raise HTTPException(status_code=400, detail="El email es requerido")
+    try:
+        email = auth_req.email.strip().lower()
+        name = auth_req.name.strip()
+        role = auth_req.role
         
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        # Default mock admin if email contains 'admin'
-        if "admin" in email and role == "pending":
-            role = "admin"
-        
-        user = User(email=email, full_name=name, role=role, is_approved=(role in ["admin", "donor", "pending"]))
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    else:
-        # If user exists and role was requested, update role
-        if role != "pending" and user.role != role:
-            user.role = role
-            user.is_approved = (role in ["admin", "donor", "pending"])
+        if not email:
+            raise HTTPException(status_code=400, detail="El email es requerido")
+            
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            # Default mock admin if email contains 'admin'
+            if "admin" in email and role == "pending":
+                role = "admin"
+            
+            user = User(email=email, full_name=name, role=role, is_approved=(role in ["admin", "donor", "pending"]))
+            db.add(user)
             db.commit()
             db.refresh(user)
+        else:
+            # If user exists and role was requested, update role
+            if role != "pending" and user.role != role:
+                user.role = role
+                user.is_approved = (role in ["admin", "donor", "pending"])
+                db.commit()
+                db.refresh(user)
 
-    access_token = create_access_token(data={"email": user.email, "role": user.role})
-    
-    response.set_cookie(
-        key="session_token",
-        value=access_token,
-        httponly=True,
-        max_age=86400,
-        samesite="lax",
-        secure=False
-    )
-    
-    return {
-        "email": user.email,
-        "name": user.full_name,
-        "role": user.role,
-        "is_approved": user.is_approved
-    }
+        access_token = create_access_token(data={"email": user.email, "role": user.role})
+        
+        response.set_cookie(
+            key="session_token",
+            value=access_token,
+            httponly=True,
+            max_age=86400,
+            samesite="lax",
+            secure=False
+        )
+        
+        return {
+            "email": user.email,
+            "name": user.full_name,
+            "role": user.role,
+            "is_approved": user.is_approved
+        }
+    except Exception as e:
+        import traceback
+        return Response(content=f"ERROR: {str(e)}\n{traceback.format_exc()}", status_code=500, media_type="text/plain")
 
 @app.post("/api/auth/logout")
 @app.post("/auth/logout")
