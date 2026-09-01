@@ -1,10 +1,15 @@
 import os
+import tempfile
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Read from env (Supabase Postgres) or fallback to local SQLite
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///synth_argentina.db")
+# Read from env (Supabase Postgres) or fallback to writable /tmp SQLite
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL or DATABASE_URL.strip() == "":
+    db_path = os.path.join(tempfile.gettempdir(), "synth_argentina.db")
+    DATABASE_URL = f"sqlite:///{db_path}"
 
 # Fix Heroku/Vercel postgres:// URI scheme for SQLAlchemy
 if DATABASE_URL.startswith("postgres://"):
@@ -17,8 +22,9 @@ else:
     # PostgreSQL configuration for Supabase
     engine = create_engine(
         DATABASE_URL,
-        pool_size=5,
-        max_overflow=10,
+        pool_size=3,
+        max_overflow=5,
+        pool_recycle=300,
         pool_pre_ping=True  # Auto-reconnect if serverless connection drops
     )
 

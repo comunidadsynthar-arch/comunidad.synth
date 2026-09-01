@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // Fetch user profile and determine view
 async function fetchUserData() {
     try {
-        const response = await fetch("/api/auth/me");
+        const response = await fetch("/auth/me");
         if (response.status === 401) {
             // Not logged in, redirect to login page
             window.location.href = "/login";
@@ -106,7 +106,7 @@ function renderRoleView() {
 // --- Logout Handler ---
 async function handleLogout() {
     try {
-        await fetch("/api/auth/logout", { method: "POST" });
+        await fetch("/auth/logout", { method: "POST" });
         window.location.href = "/";
     } catch (err) {
         console.error("Error al cerrar sesión:", err);
@@ -116,7 +116,7 @@ async function handleLogout() {
 // --- Role Selection (For pending users) ---
 async function selectRole(role) {
     try {
-        const response = await fetch("/api/auth/select-role", {
+        const response = await fetch("/auth/select-role", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ role })
@@ -168,7 +168,7 @@ async function saveBrandProfile(event) {
     };
     
     try {
-        const response = await fetch("/api/profile/brand", {
+        const response = await fetch("/profile/brand", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
@@ -219,7 +219,7 @@ async function saveMusicianProfile(event) {
     };
     
     try {
-        const response = await fetch("/api/profile/musician", {
+        const response = await fetch("/profile/musician", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
@@ -241,7 +241,7 @@ async function saveMusicianProfile(event) {
 async function renderDonorView() {
     // Fetch my donations
     try {
-        const response = await fetch("/api/donations/my");
+        const response = await fetch("/donations/my");
         if (response.ok) {
             const donations = await response.json();
             const tbody = document.getElementById("my-donations-tbody");
@@ -271,7 +271,7 @@ async function renderDonorView() {
 
 async function donateAmount(amount) {
     try {
-        const response = await fetch("/api/donations/create", {
+        const response = await fetch("/donations/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ amount: parseFloat(amount) })
@@ -303,7 +303,7 @@ function donateCustom() {
 async function renderAdminView() {
     // 1. Fetch Stats
     try {
-        const response = await fetch("/api/admin/stats");
+        const response = await fetch("/admin/stats");
         if (response.ok) {
             const stats = await response.json();
             document.getElementById("stat-brands").textContent = stats.total_brands;
@@ -317,7 +317,7 @@ async function renderAdminView() {
 
     // 2. Fetch Registrations
     try {
-        const response = await fetch("/api/admin/registrations");
+        const response = await fetch("/admin/registrations");
         if (response.ok) {
             const items = await response.json();
             const tbody = document.getElementById("registrations-tbody");
@@ -387,7 +387,7 @@ async function renderAdminView() {
 
 async function approveUser(userId) {
     try {
-        const response = await fetch(`/api/admin/approve/${userId}`, { method: "POST" });
+        const response = await fetch(`/admin/approve/${userId}`, { method: "POST" });
         if (response.ok) {
             showDashboardAlert("Usuario aprobado con éxito.");
             renderAdminView();
@@ -399,7 +399,7 @@ async function approveUser(userId) {
 
 async function rejectUser(userId) {
     try {
-        const response = await fetch(`/api/admin/reject/${userId}`, { method: "POST" });
+        const response = await fetch(`/admin/reject/${userId}`, { method: "POST" });
         if (response.ok) {
             showDashboardAlert("Aprobación revocada correctamente.");
             renderAdminView();

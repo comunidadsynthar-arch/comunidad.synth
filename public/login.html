@@ -109,7 +109,7 @@
             }
 
             try {
-                const response = await fetch('/api/auth/mock', {
+                const response = await fetch('/auth/mock', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, name, role })
@@ -137,7 +137,7 @@
             const idToken = googleResponse.credential;
             
             try {
-                const response = await fetch('/api/auth/google', {
+                const response = await fetch('/auth/google', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id_token: idToken })
