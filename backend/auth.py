@@ -13,7 +13,7 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "synth_argentina_secret_key_123456789")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
 
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "569194393356-hsgl6ivaojieom22mrkm6sstdc4j5kg6.apps.googleusercontent.com")
 
 def create_access_token(data: dict):
     to_encode = data.copy()
