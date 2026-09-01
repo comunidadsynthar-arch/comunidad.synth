@@ -34,17 +34,17 @@ def verify_google_token(id_token: str) -> dict:
     try:
         # Query Google's token verification endpoint
         url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=5) as response:
+        req = urllib.request.Request(url, headers={"User-Agent": "SynthArgentina-Portal/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as response:
             token_info = json.loads(response.read().decode())
             
-            if "error_description" in token_info:
-                print(f"Google token verification error: {token_info['error_description']}")
+            if "error" in token_info or "error_description" in token_info:
+                print(f"Google token verification error: {token_info}")
                 return None
                 
             # If Google Client ID is configured, verify the audience (aud)
             if GOOGLE_CLIENT_ID and token_info.get("aud") != GOOGLE_CLIENT_ID:
-                print("Google token audience mismatch")
+                print(f"Google token audience mismatch: {token_info.get('aud')} vs {GOOGLE_CLIENT_ID}")
                 return None
                 
             return token_info

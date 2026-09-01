@@ -151,11 +151,18 @@
                         window.location.href = '/dashboard';
                     }, 800);
                 } else {
-                    const error = await response.json();
-                    showMessage(error.detail || "Error al autenticar con Google.");
+                    let errMsg = "Error al autenticar con Google.";
+                    try {
+                        const error = await response.json();
+                        errMsg = error.detail || errMsg;
+                    } catch (e) {
+                        errMsg = `Error del servidor (${response.status}): ${response.statusText}`;
+                    }
+                    showMessage(errMsg);
                 }
             } catch (err) {
-                showMessage("Error de red al conectar con el backend.");
+                console.error("Fetch error:", err);
+                showMessage("Error de red al conectar con el backend: " + (err.message || err));
             }
         }
     </script>

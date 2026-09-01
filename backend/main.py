@@ -21,7 +21,18 @@ try:
 except Exception as e:
     print(f"Database initialization notice: {e}")
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Synth Argentina Portal API")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Request Models
 class GoogleAuthRequest(BaseModel):
