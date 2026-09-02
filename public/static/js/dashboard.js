@@ -260,7 +260,7 @@ function renderMusicianView() {
         statusBox.textContent = "👑 Modo Administrador: Podés ver o configurar la propuesta artística y rider técnico.";
     } else if (currentUser.is_approved) {
         statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-emerald-950/40 text-emerald-400 border-emerald-800";
-        statusBox.textContent = "🎙️ ¡Tu propuesta musical está APROBADA! Estás programado en la grilla del evento.";
+        statusBox.textContent = "🎙️ ¡Tu propuesta musical está APROBADA!";
     } else {
         statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-amber-950/40 text-amber-400 border-amber-800";
         statusBox.textContent = "⏳ Tu propuesta musical fue cargada y está PENDIENTE de curaduría técnica por administración.";
