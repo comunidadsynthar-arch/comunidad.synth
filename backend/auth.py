@@ -53,6 +53,15 @@ def verify_google_token(id_token: str) -> dict:
         print(f"Exception during Google token verification: {e}")
         return None
 
+# Authorized Administrators
+COMMUNITY_EMAIL = os.getenv("COMMUNITY_EMAIL", "comunidad.synth.ar@gmail.com").strip().lower()
+ALLOWED_ADMIN_EMAILS = {"aledflores@gmail.com", COMMUNITY_EMAIL}
+
+def is_admin_email(email: str) -> bool:
+    if not email:
+        return False
+    return email.strip().lower() in ALLOWED_ADMIN_EMAILS
+
 # Dependency to check JWT from HttpOnly Cookie
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     token = request.cookies.get("session_token")
@@ -82,10 +91,26 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario no encontrado",
         )
+
+    # Auto-heal: Ensure authorized admin emails always retain the admin role and approval
+    if is_admin_email(user.email) and (user.role != "admin" or not user.is_approved):
+        user.role = "admin"
+        user.is_approved = True
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception as e:
+            db.rollback()
+            print(f"Notice auto-healing admin role: {e}")
+
     return user
 
 # Role-specific checks
 def check_role(user: User, required_roles: list):
+    # Administrators have universal access to all profiles and resources
+    if user.role == "admin" or is_admin_email(user.email):
+        return True
+
     if user.role not in required_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

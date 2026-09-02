@@ -15,7 +15,9 @@ from backend.auth import (
     create_access_token, 
     verify_google_token, 
     get_current_user, 
-    check_role
+    check_role,
+    is_admin_email,
+    ALLOWED_ADMIN_EMAILS
 )
 
 # Initialize Database tables safely
@@ -80,21 +82,27 @@ def auth_google(auth_req: GoogleAuthRequest, response: Response, db: Session = D
                 detail="Token de Google inválido o no reconocido"
             )
             
-        email = token_info.get("email")
+        email = token_info.get("email", "").strip().lower()
         name = token_info.get("name", "")
         google_id = token_info.get("sub")
         
+        is_admin = is_admin_email(email)
+        initial_role = "admin" if is_admin else "pending"
+        initial_approved = True if is_admin else False
+
         # Check if user exists
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            # Create new user, defaults to 'pending' role until chosen
-            user = User(email=email, full_name=name, google_id=google_id, role="pending")
+            user = User(email=email, full_name=name, google_id=google_id, role=initial_role, is_approved=initial_approved)
             db.add(user)
             db.commit()
             db.refresh(user)
-        elif google_id and not user.google_id:
-            # Link google id if not already linked
-            user.google_id = google_id
+        else:
+            if is_admin:
+                user.role = "admin"
+                user.is_approved = True
+            if google_id and not user.google_id:
+                user.google_id = google_id
             db.commit()
             db.refresh(user)
 
@@ -115,6 +123,7 @@ def auth_google(auth_req: GoogleAuthRequest, response: Response, db: Session = D
             "email": user.email,
             "name": user.full_name,
             "role": user.role,
+            "is_admin": is_admin,
             "is_approved": user.is_approved
         }
     except HTTPException:
@@ -146,23 +155,27 @@ def auth_mock(auth_req: MockAuthRequest, response: Response, db: Session = Depen
         if not email:
             raise HTTPException(status_code=400, detail="El email es requerido")
             
+        is_admin = is_admin_email(email)
+        if is_admin:
+            role = "admin"
+        elif role == "admin":
+            role = "pending" # Prevent non-authorized emails from assuming admin role
+            
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            # Default mock admin if email contains 'admin'
-            if "admin" in email and role == "pending":
-                role = "admin"
-            
             user = User(email=email, full_name=name, role=role, is_approved=(role in ["admin", "donor", "pending"]))
             db.add(user)
             db.commit()
             db.refresh(user)
         else:
-            # If user exists and role was requested, update role
-            if role != "pending" and user.role != role:
+            if is_admin:
+                user.role = "admin"
+                user.is_approved = True
+            elif role != "pending" and user.role != role:
                 user.role = role
-                user.is_approved = (role in ["admin", "donor", "pending"])
-                db.commit()
-                db.refresh(user)
+                user.is_approved = (role in ["donor", "pending"])
+            db.commit()
+            db.refresh(user)
 
         access_token = create_access_token(data={"email": user.email, "role": user.role})
         
@@ -179,6 +192,7 @@ def auth_mock(auth_req: MockAuthRequest, response: Response, db: Session = Depen
             "email": user.email,
             "name": user.full_name,
             "role": user.role,
+            "is_admin": is_admin,
             "is_approved": user.is_approved
         }
     except Exception as e:
@@ -194,9 +208,11 @@ def logout(response: Response):
 @app.get("/api/auth/me")
 @app.get("/auth/me")
 def get_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = None
-    if current_user.role == "brand" and current_user.brand_profile:
-        profile = {
+    is_admin = current_user.role == "admin" or is_admin_email(current_user.email)
+    
+    brand_data = None
+    if current_user.brand_profile:
+        brand_data = {
             "brand_name": current_user.brand_profile.brand_name,
             "description": current_user.brand_profile.description,
             "website": current_user.brand_profile.website,
@@ -204,8 +220,10 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
             "electricity_needs": current_user.brand_profile.electricity_needs,
             "products": current_user.brand_profile.products,
         }
-    elif current_user.role == "musician" and current_user.musician_profile:
-        profile = {
+        
+    musician_data = None
+    if current_user.musician_profile:
+        musician_data = {
             "artist_name": current_user.musician_profile.artist_name,
             "genre": current_user.musician_profile.genre,
             "bio": current_user.musician_profile.bio,
@@ -214,17 +232,27 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
             "technical_rider": current_user.musician_profile.technical_rider,
         }
         
+    profile = brand_data if current_user.role == "brand" else musician_data
+    if is_admin and not profile:
+        profile = musician_data or brand_data
+        
     return {
         "email": current_user.email,
         "name": current_user.full_name,
         "role": current_user.role,
+        "is_admin": is_admin,
         "is_approved": current_user.is_approved,
-        "profile": profile
+        "profile": profile,
+        "brand_profile": brand_data,
+        "musician_profile": musician_data
     }
 
 @app.post("/api/auth/select-role")
 @app.post("/auth/select-role")
 def select_role(role_req: SelectRoleRequest, response: Response, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if is_admin_email(current_user.email):
+        return {"role": "admin", "is_approved": True, "is_admin": True}
+
     if current_user.role != "pending":
         raise HTTPException(
             status_code=400,
@@ -250,7 +278,7 @@ def select_role(role_req: SelectRoleRequest, response: Response, current_user: U
         secure=False
     )
     
-    return {"role": current_user.role, "is_approved": current_user.is_approved}
+    return {"role": current_user.role, "is_approved": current_user.is_approved, "is_admin": False}
 
 # --- Profiles registration ---
 

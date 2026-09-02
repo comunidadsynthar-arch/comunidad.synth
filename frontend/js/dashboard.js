@@ -40,7 +40,15 @@ function updateNavbar() {
         "donor": "Donante"
     };
     
-    document.getElementById("user-display-role").textContent = roleMap[currentUser.role] || currentUser.role;
+    const roleBadge = document.getElementById("user-display-role");
+    const isUserAdmin = currentUser.is_admin || currentUser.role === "admin";
+    if (isUserAdmin) {
+        roleBadge.textContent = "👑 Administrador";
+        roleBadge.className = "inline-block px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold bg-amber-400/20 text-amber-300 border border-amber-500/40 shadow-sm";
+    } else {
+        roleBadge.textContent = roleMap[currentUser.role] || currentUser.role;
+        roleBadge.className = "inline-block px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-zinc-800 text-zinc-400 border border-zinc-700";
+    }
 }
 
 // Hide all dashboard panels
@@ -69,9 +77,53 @@ function showDashboardAlert(message, type = "success") {
     }, 5000);
 }
 
+// Admin Tab Switcher: Grants Administrators full access to all profiles
+function switchAdminTab(tabName) {
+    hideAllViews();
+    
+    const tabs = ['admin', 'musician', 'brand', 'donor'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (btn) {
+            btn.className = "flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition bg-zinc-800 hover:bg-zinc-700 text-zinc-300";
+        }
+    });
+    
+    const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+    if (activeBtn) {
+        activeBtn.className = "flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition bg-sky-500 text-zinc-950 shadow-md";
+    }
+    
+    if (tabName === 'admin') {
+        document.getElementById("view-admin").classList.remove("hidden");
+        renderAdminView();
+    } else if (tabName === 'musician') {
+        document.getElementById("view-musician").classList.remove("hidden");
+        renderMusicianView();
+    } else if (tabName === 'brand') {
+        document.getElementById("view-brand").classList.remove("hidden");
+        renderBrandView();
+    } else if (tabName === 'donor') {
+        document.getElementById("view-donor").classList.remove("hidden");
+        renderDonorView();
+    }
+}
+
 // Render view based on role
 function renderRoleView() {
     hideAllViews();
+    
+    const isUserAdmin = currentUser.is_admin || currentUser.role === "admin";
+    const adminNav = document.getElementById("admin-nav-tabs");
+    
+    if (isUserAdmin) {
+        if (adminNav) adminNav.classList.remove("hidden");
+        // Always default to Admin panel view for administrators
+        switchAdminTab('admin');
+        return;
+    } else {
+        if (adminNav) adminNav.classList.add("hidden");
+    }
     
     switch (currentUser.role) {
         case "pending":
@@ -136,18 +188,22 @@ async function selectRole(role) {
 // --- Brand Profile handlers ---
 function renderBrandView() {
     // Populate form if profile details exist
-    if (currentUser.profile) {
-        document.getElementById("brand-name").value = currentUser.profile.brand_name || "";
-        document.getElementById("brand-desc").value = currentUser.profile.description || "";
-        document.getElementById("brand-website").value = currentUser.profile.website || "";
-        document.getElementById("brand-space").value = currentUser.profile.space_requested || 1.0;
-        document.getElementById("brand-electricity").value = currentUser.profile.electricity_needs || "";
-        document.getElementById("brand-products").value = currentUser.profile.products || "";
+    const prof = currentUser.brand_profile || currentUser.profile;
+    if (prof) {
+        document.getElementById("brand-name").value = prof.brand_name || "";
+        document.getElementById("brand-desc").value = prof.description || "";
+        document.getElementById("brand-website").value = prof.website || "";
+        document.getElementById("brand-space").value = prof.space_requested || 1.0;
+        document.getElementById("brand-electricity").value = prof.electricity_needs || "";
+        document.getElementById("brand-products").value = prof.products || "";
     }
     
     // Status Alert
     const statusBox = document.getElementById("brand-approval-status");
-    if (currentUser.is_approved) {
+    if (currentUser.is_admin || currentUser.role === "admin") {
+        statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-sky-950/40 text-sky-400 border-sky-800";
+        statusBox.textContent = "👑 Modo Administrador: Podés ver o configurar los datos de stand y marca expositora.";
+    } else if (currentUser.is_approved) {
         statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-emerald-950/40 text-emerald-400 border-emerald-800";
         statusBox.textContent = "⚡ ¡Tu perfil de marca está APROBADO por administración! Formas parte oficial de los expositores de Synth Argentina.";
     } else {
@@ -188,17 +244,21 @@ async function saveBrandProfile(event) {
 
 // --- Musician Profile handlers ---
 function renderMusicianView() {
-    if (currentUser.profile) {
-        document.getElementById("musician-name").value = currentUser.profile.artist_name || "";
-        document.getElementById("musician-genre").value = currentUser.profile.genre || "";
-        document.getElementById("musician-bio").value = currentUser.profile.bio || "";
-        document.getElementById("musician-links").value = currentUser.profile.links || "";
-        document.getElementById("musician-setup").value = currentUser.profile.setup_description || "";
-        document.getElementById("musician-rider").value = currentUser.profile.technical_rider || "";
+    const prof = currentUser.musician_profile || currentUser.profile;
+    if (prof) {
+        document.getElementById("musician-name").value = prof.artist_name || "";
+        document.getElementById("musician-genre").value = prof.genre || "";
+        document.getElementById("musician-bio").value = prof.bio || "";
+        document.getElementById("musician-links").value = prof.links || "";
+        document.getElementById("musician-setup").value = prof.setup_description || "";
+        document.getElementById("musician-rider").value = prof.technical_rider || "";
     }
     
     const statusBox = document.getElementById("musician-approval-status");
-    if (currentUser.is_approved) {
+    if (currentUser.is_admin || currentUser.role === "admin") {
+        statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-sky-950/40 text-sky-400 border-sky-800";
+        statusBox.textContent = "👑 Modo Administrador: Podés ver o configurar la propuesta artística y rider técnico.";
+    } else if (currentUser.is_approved) {
         statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-emerald-950/40 text-emerald-400 border-emerald-800";
         statusBox.textContent = "🎙️ ¡Tu propuesta musical está APROBADA! Estás programado en la grilla del evento.";
     } else {
