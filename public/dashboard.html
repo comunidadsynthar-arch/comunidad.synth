@@ -38,8 +38,14 @@
     <!-- Main Container -->
     <main class="max-w-6xl w-full mx-auto px-4 py-8 flex-grow">
         
-        <!-- Status alerts -->
-        <div id="dashboard-alert" class="hidden mb-6 p-4 rounded-xl border text-sm text-center"></div>
+        <!-- Floating Status Alert Toast (Visible anywhere on screen) -->
+        <div id="dashboard-alert" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 hidden transition-all duration-300 transform scale-95 opacity-0 pointer-events-none max-w-lg w-[92%] sm:w-auto">
+            <div id="dashboard-alert-content" class="flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-semibold backdrop-blur-md pointer-events-auto bg-zinc-900/95 text-emerald-400 border-emerald-500/50 shadow-emerald-950/40">
+                <span id="dashboard-alert-icon" class="text-base flex-shrink-0">✅</span>
+                <span id="dashboard-alert-text" class="text-xs sm:text-sm leading-snug"></span>
+                <button type="button" onclick="hideDashboardAlert()" class="ml-2 text-zinc-400 hover:text-zinc-100 text-sm font-bold flex-shrink-0 transition" title="Cerrar notificación">✕</button>
+            </div>
+        </div>
 
         <!-- Personalized User Welcome Box -->
         <div id="user-welcome-box" class="hidden mb-6 p-4 rounded-xl bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-900/40 border border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-md">

@@ -224,23 +224,54 @@ function hideAllViews() {
     document.getElementById("view-admin").classList.add("hidden");
 }
 
-// Display alert message on top of dashboard
+let alertTimeout = null;
+
+// Display floating toast alert message anywhere on screen
 function showDashboardAlert(message, type = "success") {
-    const alertBox = document.getElementById("dashboard-alert");
-    alertBox.textContent = message;
-    alertBox.classList.remove("hidden");
-    
-    if (type === "success") {
-        alertBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-emerald-950/40 text-emerald-400 border-emerald-800 shadow-sm";
-    } else if (type === "warning") {
-        alertBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-amber-950/40 text-amber-400 border-amber-800 shadow-sm";
-    } else {
-        alertBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-rose-950/40 text-rose-400 border-rose-800 shadow-sm";
+    const alertContainer = document.getElementById("dashboard-alert");
+    const alertContent = document.getElementById("dashboard-alert-content");
+    const alertText = document.getElementById("dashboard-alert-text");
+    const alertIcon = document.getElementById("dashboard-alert-icon");
+    if (!alertContainer || !alertContent || !alertText) return;
+
+    if (alertTimeout) {
+        clearTimeout(alertTimeout);
+        alertTimeout = null;
     }
-    
+
+    alertText.textContent = message;
+
+    if (type === "success") {
+        alertContent.className = "flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-semibold backdrop-blur-md pointer-events-auto bg-zinc-900/95 text-emerald-400 border-emerald-500/50 shadow-emerald-950/40";
+        if (alertIcon) alertIcon.textContent = "✅";
+    } else if (type === "warning") {
+        alertContent.className = "flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-semibold backdrop-blur-md pointer-events-auto bg-zinc-900/95 text-amber-300 border-amber-500/50 shadow-amber-950/40";
+        if (alertIcon) alertIcon.textContent = "⚠️";
+    } else {
+        alertContent.className = "flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-semibold backdrop-blur-md pointer-events-auto bg-zinc-900/95 text-rose-400 border-rose-500/50 shadow-rose-950/40";
+        if (alertIcon) alertIcon.textContent = "❌";
+    }
+
+    // Show container and animate in
+    alertContainer.classList.remove("hidden");
+    requestAnimationFrame(() => {
+        alertContainer.classList.remove("scale-95", "opacity-0");
+        alertContainer.classList.add("scale-100", "opacity-100");
+    });
+
+    alertTimeout = setTimeout(() => {
+        hideDashboardAlert();
+    }, 4500);
+}
+
+function hideDashboardAlert() {
+    const alertContainer = document.getElementById("dashboard-alert");
+    if (!alertContainer) return;
+    alertContainer.classList.remove("scale-100", "opacity-100");
+    alertContainer.classList.add("scale-95", "opacity-0");
     setTimeout(() => {
-        alertBox.classList.add("hidden");
-    }, 5000);
+        alertContainer.classList.add("hidden");
+    }, 300);
 }
 
 // Admin Tab Switcher: Grants Administrators full access to all profiles
