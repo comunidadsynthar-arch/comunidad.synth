@@ -658,7 +658,7 @@ function renderBrandGallery() {
                 </div>
                 <div class="sm:col-span-3 flex flex-col">
                     <label class="block text-[11px] font-semibold text-zinc-400 mb-1">
-                        Ficha Frecuencia (Texto revelado al mantener presionado 3 seg)
+                        Ficha Frecuencia (Texto revelado al mantener presionado 1,5 seg)
                     </label>
                     <textarea id="brand-chapter-caption-${idx}" rows="3" placeholder="${ch.placeholder}" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-xs focus:outline-none focus:border-sky-500 text-zinc-200" oninput="updateChapterCaption('brand', ${idx}, this.value)">${slot.caption || ""}</textarea>
                     <p class="text-[10px] text-zinc-500 mt-1">💡 Sugerencia: ${ch.placeholder}</p>
@@ -855,7 +855,7 @@ function renderMusicianGallery() {
                 </div>
                 <div class="sm:col-span-3 flex flex-col">
                     <label class="block text-[11px] font-semibold text-zinc-400 mb-1">
-                        Ficha Frecuencia (Texto revelado al mantener presionado 3 seg)
+                        Ficha Frecuencia (Texto revelado al mantener presionado 1,5 seg)
                     </label>
                     <textarea id="musician-chapter-caption-${idx}" rows="3" placeholder="${ch.placeholder}" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-xs focus:outline-none focus:border-purple-500 text-zinc-200" oninput="updateChapterCaption('musician', ${idx}, this.value)">${slot.caption || ""}</textarea>
                     <p class="text-[10px] text-zinc-500 mt-1">💡 Sugerencia: ${ch.placeholder}</p>

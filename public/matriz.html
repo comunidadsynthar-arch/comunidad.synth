@@ -159,11 +159,11 @@
         <span class="text-lg">🎛️</span>
         <div>
             <div class="text-sky-400 font-bold tracking-wide text-[11px] uppercase">Navegación Matricial 2D</div>
-            <div class="text-zinc-300 text-[11px]">↕ Deslizá para cambiar de artista · ↔ Recorré fotos · Mantené presionado 3s para información</div>
+            <div class="text-zinc-300 text-[11px]">↕ Deslizá para cambiar de artista · ↔ Recorré fotos · Mantené presionado 1,5s para información</div>
         </div>
     </div>
 
-    <!-- 3-Second Hold Animated Ring Indicator -->
+    <!-- 1.5-Second Hold Animated Ring Indicator -->
     <div id="hold-indicator" class="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-150 flex flex-col items-center justify-center">
         <div class="relative w-24 h-24 flex items-center justify-center">
             <svg class="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
@@ -173,7 +173,7 @@
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span class="text-[10px] font-black tracking-widest text-sky-400 uppercase">FICHA</span>
-                <span id="hold-seconds" class="text-xs text-white font-bold">3s</span>
+                <span id="hold-seconds" class="text-xs text-white font-bold">1.5s</span>
             </div>
         </div>
         <span class="mt-2 text-[10px] font-semibold text-white/90 bg-black/75 backdrop-blur-md px-3 py-1 rounded-full border border-white/15 shadow-xl">
@@ -256,7 +256,7 @@
         let holdStartX = 0;
         let holdStartY = 0;
         let holdTargetSlide = null;
-        const HOLD_DURATION = 3000; // 3 seconds
+        const HOLD_DURATION = 1500; // 1.5 seconds
         const CIRCUMFERENCE = 263.89; // 2 * PI * 42
 
         const MUSICIAN_DEFAULT_CHAPTERS = [
