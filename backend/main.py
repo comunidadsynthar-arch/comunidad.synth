@@ -1,12 +1,13 @@
 import os
+import json
 import pathlib
 from fastapi import FastAPI, Depends, HTTPException, status, Response, Cookie
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from typing import Optional
+from sqlalchemy import func, text
+from typing import Optional, List
 from pydantic import BaseModel
 
 from backend.database import engine, get_db, Base
@@ -23,6 +24,13 @@ from backend.auth import (
 # Initialize Database tables safely
 try:
     Base.metadata.create_all(bind=engine)
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;"))
+            conn.execute(text("ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS logo_url TEXT;"))
+            conn.execute(text("ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS gallery_images TEXT;"))
+            conn.execute(text("ALTER TABLE musician_profiles ADD COLUMN IF NOT EXISTS photo_url TEXT;"))
+            conn.execute(text("ALTER TABLE musician_profiles ADD COLUMN IF NOT EXISTS gallery_images TEXT;"))
 except Exception as e:
     print(f"Database initialization notice: {e}")
 
@@ -49,10 +57,15 @@ class MockAuthRequest(BaseModel):
 class SelectRoleRequest(BaseModel):
     role: str
 
+class AvatarUpdateRequest(BaseModel):
+    avatar_url: str
+
 class BrandProfileRequest(BaseModel):
     brand_name: str
     description: Optional[str] = ""
     website: Optional[str] = ""
+    logo_url: Optional[str] = ""
+    gallery_images: Optional[List[str]] = []
     space_requested: float
     electricity_needs: str
     products: Optional[str] = ""
@@ -62,6 +75,8 @@ class MusicianProfileRequest(BaseModel):
     genre: Optional[str] = ""
     bio: Optional[str] = ""
     links: Optional[str] = ""
+    photo_url: Optional[str] = ""
+    gallery_images: Optional[List[str]] = []
     setup_description: Optional[str] = ""
     technical_rider: Optional[str] = ""
 
@@ -219,10 +234,18 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
     
     brand_data = None
     if current_user.brand_profile:
+        brand_gallery = []
+        if current_user.brand_profile.gallery_images:
+            try:
+                brand_gallery = json.loads(current_user.brand_profile.gallery_images)
+            except Exception:
+                brand_gallery = []
         brand_data = {
             "brand_name": current_user.brand_profile.brand_name,
             "description": current_user.brand_profile.description,
             "website": current_user.brand_profile.website,
+            "logo_url": current_user.brand_profile.logo_url or "",
+            "gallery_images": brand_gallery,
             "space_requested": current_user.brand_profile.space_requested,
             "electricity_needs": current_user.brand_profile.electricity_needs,
             "products": current_user.brand_profile.products,
@@ -230,11 +253,19 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
         
     musician_data = None
     if current_user.musician_profile:
+        musician_gallery = []
+        if current_user.musician_profile.gallery_images:
+            try:
+                musician_gallery = json.loads(current_user.musician_profile.gallery_images)
+            except Exception:
+                musician_gallery = []
         musician_data = {
             "artist_name": current_user.musician_profile.artist_name,
             "genre": current_user.musician_profile.genre,
             "bio": current_user.musician_profile.bio,
             "links": current_user.musician_profile.links,
+            "photo_url": current_user.musician_profile.photo_url or "",
+            "gallery_images": musician_gallery,
             "setup_description": current_user.musician_profile.setup_description,
             "technical_rider": current_user.musician_profile.technical_rider,
         }
@@ -259,6 +290,7 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
     return {
         "email": current_user.email,
         "name": current_user.full_name,
+        "avatar_url": current_user.avatar_url or "",
         "role": current_user.role,
         "is_admin": is_admin,
         "is_approved": current_user.is_approved,
@@ -301,6 +333,16 @@ def select_role(role_req: SelectRoleRequest, response: Response, current_user: U
     
     return {"role": current_user.role, "is_approved": current_user.is_approved, "is_admin": False}
 
+# --- User Avatar ---
+
+@app.post("/api/user/avatar")
+@app.post("/user/avatar")
+def update_user_avatar(avatar_req: AvatarUpdateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    current_user.avatar_url = avatar_req.avatar_url
+    db.commit()
+    db.refresh(current_user)
+    return {"message": "Foto de perfil actualizada correctamente", "avatar_url": current_user.avatar_url}
+
 # --- Profiles registration ---
 
 @app.post("/api/profile/brand")
@@ -316,6 +358,10 @@ def save_brand_profile(profile_req: BrandProfileRequest, current_user: User = De
     profile.brand_name = profile_req.brand_name
     profile.description = profile_req.description
     profile.website = profile_req.website
+    if profile_req.logo_url is not None:
+        profile.logo_url = profile_req.logo_url
+    if profile_req.gallery_images is not None:
+        profile.gallery_images = json.dumps(profile_req.gallery_images[:6])
     profile.space_requested = profile_req.space_requested
     profile.electricity_needs = profile_req.electricity_needs
     profile.products = profile_req.products
@@ -337,6 +383,10 @@ def save_musician_profile(profile_req: MusicianProfileRequest, current_user: Use
     profile.genre = profile_req.genre
     profile.bio = profile_req.bio
     profile.links = profile_req.links
+    if profile_req.photo_url is not None:
+        profile.photo_url = profile_req.photo_url
+    if profile_req.gallery_images is not None:
+        profile.gallery_images = json.dumps(profile_req.gallery_images[:6])
     profile.setup_description = profile_req.setup_description
     profile.technical_rider = profile_req.technical_rider
     
@@ -427,20 +477,36 @@ def get_registrations(current_user: User = Depends(get_current_user), db: Sessio
     for u in users:
         detail = {}
         if u.role == "brand" and u.brand_profile:
+            b_gallery = []
+            if u.brand_profile.gallery_images:
+                try:
+                    b_gallery = json.loads(u.brand_profile.gallery_images)
+                except Exception:
+                    b_gallery = []
             detail = {
                 "name": u.brand_profile.brand_name,
                 "description": u.brand_profile.description,
                 "website": u.brand_profile.website,
+                "logo_url": u.brand_profile.logo_url or "",
+                "gallery_images": b_gallery,
                 "space_requested": u.brand_profile.space_requested,
                 "electricity_needs": u.brand_profile.electricity_needs,
                 "products": u.brand_profile.products
             }
         elif u.role == "musician" and u.musician_profile:
+            m_gallery = []
+            if u.musician_profile.gallery_images:
+                try:
+                    m_gallery = json.loads(u.musician_profile.gallery_images)
+                except Exception:
+                    m_gallery = []
             detail = {
                 "name": u.musician_profile.artist_name,
                 "genre": u.musician_profile.genre,
                 "bio": u.musician_profile.bio,
                 "links": u.musician_profile.links,
+                "photo_url": u.musician_profile.photo_url or "",
+                "gallery_images": m_gallery,
                 "setup_description": u.musician_profile.setup_description
             }
         elif u.role == "collaborator" and u.collaborator_profile:
@@ -459,6 +525,7 @@ def get_registrations(current_user: User = Depends(get_current_user), db: Sessio
             "user_id": u.id,
             "email": u.email,
             "full_name": u.full_name,
+            "avatar_url": u.avatar_url or "",
             "role": u.role,
             "is_approved": u.is_approved,
             "created_at": u.created_at.strftime("%Y-%m-%d"),

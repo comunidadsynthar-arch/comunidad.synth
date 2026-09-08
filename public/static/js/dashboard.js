@@ -1,5 +1,70 @@
 // Global state
 let currentUser = null;
+let brandLogo = "";
+let brandGallery = [];
+let musicianPhoto = "";
+let musicianGallery = [];
+
+// Canvas Image Compressor (Resize & compress to WebP/JPEG)
+function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        if (!file || !file.type.startsWith('image/')) {
+            reject(new Error("El archivo seleccionado no es una imagen válida"));
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth || height > maxHeight) {
+                    if (width / height > maxWidth / maxHeight) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    } else {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Try WebP first, fallback to JPEG
+                let dataUrl = canvas.toDataURL("image/webp", quality);
+                if (!dataUrl.startsWith("data:image/webp")) {
+                    dataUrl = canvas.toDataURL("image/jpeg", quality);
+                }
+                resolve(dataUrl);
+            };
+            img.onerror = () => reject(new Error("Error al decodificar la imagen"));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error("Error al leer el archivo"));
+        reader.readAsDataURL(file);
+    });
+}
+
+// Lightbox modal helpers
+function openLightbox(src, caption = "") {
+    const modal = document.getElementById("image-lightbox-modal");
+    const img = document.getElementById("lightbox-img");
+    const cap = document.getElementById("lightbox-caption");
+    if (!modal || !img) return;
+    img.src = src;
+    if (cap) cap.textContent = caption;
+    modal.classList.remove("hidden");
+}
+
+function closeLightbox() {
+    const modal = document.getElementById("image-lightbox-modal");
+    if (modal) modal.classList.add("hidden");
+}
 
 // On load
 document.addEventListener("DOMContentLoaded", () => {
@@ -33,6 +98,20 @@ async function fetchUserData() {
 function updateNavbar() {
     document.getElementById("user-display-name").textContent = currentUser.name || currentUser.email;
     
+    // Update navbar avatar
+    const navAvatar = document.getElementById("navbar-avatar");
+    const navPlaceholder = document.getElementById("navbar-avatar-placeholder");
+    if (navAvatar && navPlaceholder) {
+        if (currentUser.avatar_url) {
+            navAvatar.src = currentUser.avatar_url;
+            navAvatar.classList.remove("hidden");
+            navPlaceholder.classList.add("hidden");
+        } else {
+            navAvatar.classList.add("hidden");
+            navPlaceholder.classList.remove("hidden");
+        }
+    }
+
     const roleMap = {
         "pending": "Pendiente de Rol",
         "admin": "Administrador",
@@ -66,6 +145,20 @@ function updateWelcomeBanner() {
     const displayName = currentUser.name || currentUser.email.split("@")[0];
     nameEl.textContent = displayName;
 
+    // Welcome box avatar
+    const welcomeAvatarImg = document.getElementById("welcome-avatar-img");
+    const welcomeAvatarPlaceholder = document.getElementById("welcome-avatar-placeholder");
+    if (welcomeAvatarImg && welcomeAvatarPlaceholder) {
+        if (currentUser.avatar_url) {
+            welcomeAvatarImg.src = currentUser.avatar_url;
+            welcomeAvatarImg.classList.remove("hidden");
+            welcomeAvatarPlaceholder.classList.add("hidden");
+        } else {
+            welcomeAvatarImg.classList.add("hidden");
+            welcomeAvatarPlaceholder.classList.remove("hidden");
+        }
+    }
+
     const roleMap = {
         "pending": "Elegí tu rol",
         "admin": "👑 Administrador",
@@ -83,6 +176,40 @@ function updateWelcomeBanner() {
         statusEl.textContent = "Tu cuenta está vinculada. Por favor seleccioná tu rol abajo para participar en el evento.";
     } else {
         statusEl.textContent = "Tus datos están guardados en el sistema. Podés revisarlos o actualizarlos en cualquier momento.";
+    }
+}
+
+// Handle User Avatar Upload
+async function handleAvatarUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const feedback = document.getElementById("avatar-upload-feedback");
+    if (feedback) feedback.classList.remove("hidden");
+
+    try {
+        const compressed = await compressImage(file, 400, 400, 0.82);
+        const res = await fetch("/user/avatar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ avatar_url: compressed })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            currentUser.avatar_url = data.avatar_url || compressed;
+            updateNavbar();
+            updateWelcomeBanner();
+            showDashboardAlert("¡Foto de perfil actualizada con éxito!");
+        } else {
+            showDashboardAlert("No se pudo actualizar la foto de perfil.", "error");
+        }
+    } catch (err) {
+        console.error("Error al procesar foto:", err);
+        showDashboardAlert("Error al procesar la imagen.", "error");
+    } finally {
+        if (feedback) feedback.classList.add("hidden");
+        event.target.value = "";
     }
 }
 
@@ -242,7 +369,15 @@ function renderBrandView() {
         document.getElementById("brand-space").value = prof.space_requested || 1.0;
         document.getElementById("brand-electricity").value = prof.electricity_needs || "220V - Simple";
         document.getElementById("brand-products").value = prof.products || "";
+        brandLogo = prof.logo_url || "";
+        brandGallery = Array.isArray(prof.gallery_images) ? [...prof.gallery_images] : [];
+    } else {
+        brandLogo = "";
+        brandGallery = [];
     }
+
+    renderBrandLogoPreview();
+    renderBrandGallery();
     
     const statusBox = document.getElementById("brand-approval-status");
     if (currentUser.is_admin || currentUser.role === "admin") {
@@ -257,12 +392,108 @@ function renderBrandView() {
     }
 }
 
+function renderBrandLogoPreview() {
+    const imgEl = document.getElementById("brand-logo-img");
+    const placeholderEl = document.getElementById("brand-logo-placeholder");
+    const removeBtn = document.getElementById("brand-logo-remove-btn");
+    if (!imgEl) return;
+
+    if (brandLogo) {
+        imgEl.src = brandLogo;
+        imgEl.classList.remove("hidden");
+        if (placeholderEl) placeholderEl.classList.add("hidden");
+        if (removeBtn) removeBtn.classList.remove("hidden");
+    } else {
+        imgEl.src = "";
+        imgEl.classList.add("hidden");
+        if (placeholderEl) placeholderEl.classList.remove("hidden");
+        if (removeBtn) removeBtn.classList.add("hidden");
+    }
+}
+
+async function handleBrandLogoUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    try {
+        brandLogo = await compressImage(file, 500, 500, 0.85);
+        renderBrandLogoPreview();
+    } catch (e) {
+        showDashboardAlert("Error al procesar el logo de la marca", "error");
+    } finally {
+        event.target.value = "";
+    }
+}
+
+function removeBrandLogo() {
+    brandLogo = "";
+    renderBrandLogoPreview();
+}
+
+function renderBrandGallery() {
+    const grid = document.getElementById("brand-gallery-grid");
+    const countEl = document.getElementById("brand-gallery-count");
+    if (!grid) return;
+
+    if (countEl) countEl.textContent = `${brandGallery.length} / 6 fotos`;
+    grid.innerHTML = "";
+
+    brandGallery.forEach((imgUrl, idx) => {
+        const card = document.createElement("div");
+        card.className = "relative aspect-square rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 group shadow-sm";
+        card.innerHTML = `
+            <img src="${imgUrl}" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform" onclick="openLightbox('${imgUrl}', 'Foto de producto / stand (${idx + 1})')" alt="Foto ${idx + 1}">
+            <button type="button" onclick="removeBrandGalleryImage(${idx})" title="Eliminar foto" class="absolute top-1.5 right-1.5 bg-black/75 hover:bg-rose-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition">
+                ✕
+            </button>
+        `;
+        grid.appendChild(card);
+    });
+
+    if (brandGallery.length < 6) {
+        const addBtn = document.createElement("div");
+        addBtn.className = "aspect-square rounded-xl border-2 border-dashed border-zinc-700 hover:border-sky-500 hover:bg-sky-950/20 flex flex-col items-center justify-center text-zinc-400 hover:text-sky-400 cursor-pointer transition p-2 text-center group";
+        addBtn.onclick = () => document.getElementById("brand-gallery-input").click();
+        addBtn.innerHTML = `
+            <span class="text-2xl group-hover:scale-110 transition-transform">➕</span>
+            <span class="text-[10px] font-bold mt-1">Agregar</span>
+        `;
+        grid.appendChild(addBtn);
+    }
+}
+
+async function handleBrandGalleryUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (brandGallery.length >= 6) {
+        showDashboardAlert("Has alcanzado el límite de 6 fotos en la galería", "error");
+        return;
+    }
+
+    try {
+        const compressed = await compressImage(file, 1200, 1200, 0.78);
+        brandGallery.push(compressed);
+        renderBrandGallery();
+    } catch (e) {
+        showDashboardAlert("Error al procesar la foto", "error");
+    } finally {
+        event.target.value = "";
+    }
+}
+
+function removeBrandGalleryImage(index) {
+    brandGallery.splice(index, 1);
+    renderBrandGallery();
+}
+
 async function saveBrandProfile(event) {
     event.preventDefault();
     const payload = {
         brand_name: document.getElementById("brand-name").value.trim(),
         description: document.getElementById("brand-desc").value.trim(),
         website: document.getElementById("brand-website").value.trim(),
+        logo_url: brandLogo,
+        gallery_images: brandGallery,
         space_requested: parseFloat(document.getElementById("brand-space").value) || 1.0,
         electricity_needs: document.getElementById("brand-electricity").value,
         products: document.getElementById("brand-products").value.trim()
@@ -297,7 +528,15 @@ function renderMusicianView() {
         document.getElementById("musician-links").value = prof.links || "";
         document.getElementById("musician-setup").value = prof.setup_description || "";
         document.getElementById("musician-rider").value = prof.technical_rider || "";
+        musicianPhoto = prof.photo_url || "";
+        musicianGallery = Array.isArray(prof.gallery_images) ? [...prof.gallery_images] : [];
+    } else {
+        musicianPhoto = "";
+        musicianGallery = [];
     }
+
+    renderMusicianPhotoPreview();
+    renderMusicianGallery();
     
     const statusBox = document.getElementById("musician-approval-status");
     if (currentUser.is_admin || currentUser.role === "admin") {
@@ -312,6 +551,100 @@ function renderMusicianView() {
     }
 }
 
+function renderMusicianPhotoPreview() {
+    const imgEl = document.getElementById("musician-photo-img");
+    const placeholderEl = document.getElementById("musician-photo-placeholder");
+    const removeBtn = document.getElementById("musician-photo-remove-btn");
+    if (!imgEl) return;
+
+    if (musicianPhoto) {
+        imgEl.src = musicianPhoto;
+        imgEl.classList.remove("hidden");
+        if (placeholderEl) placeholderEl.classList.add("hidden");
+        if (removeBtn) removeBtn.classList.remove("hidden");
+    } else {
+        imgEl.src = "";
+        imgEl.classList.add("hidden");
+        if (placeholderEl) placeholderEl.classList.remove("hidden");
+        if (removeBtn) removeBtn.classList.add("hidden");
+    }
+}
+
+async function handleMusicianPhotoUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    try {
+        musicianPhoto = await compressImage(file, 800, 800, 0.82);
+        renderMusicianPhotoPreview();
+    } catch (e) {
+        showDashboardAlert("Error al procesar la foto de prensa", "error");
+    } finally {
+        event.target.value = "";
+    }
+}
+
+function removeMusicianPhoto() {
+    musicianPhoto = "";
+    renderMusicianPhotoPreview();
+}
+
+function renderMusicianGallery() {
+    const grid = document.getElementById("musician-gallery-grid");
+    const countEl = document.getElementById("musician-gallery-count");
+    if (!grid) return;
+
+    if (countEl) countEl.textContent = `${musicianGallery.length} / 6 fotos`;
+    grid.innerHTML = "";
+
+    musicianGallery.forEach((imgUrl, idx) => {
+        const card = document.createElement("div");
+        card.className = "relative aspect-square rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 group shadow-sm";
+        card.innerHTML = `
+            <img src="${imgUrl}" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform" onclick="openLightbox('${imgUrl}', 'Foto de sintetizador / show (${idx + 1})')" alt="Foto ${idx + 1}">
+            <button type="button" onclick="removeMusicianGalleryImage(${idx})" title="Eliminar foto" class="absolute top-1.5 right-1.5 bg-black/75 hover:bg-rose-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition">
+                ✕
+            </button>
+        `;
+        grid.appendChild(card);
+    });
+
+    if (musicianGallery.length < 6) {
+        const addBtn = document.createElement("div");
+        addBtn.className = "aspect-square rounded-xl border-2 border-dashed border-zinc-700 hover:border-sky-500 hover:bg-sky-950/20 flex flex-col items-center justify-center text-zinc-400 hover:text-sky-400 cursor-pointer transition p-2 text-center group";
+        addBtn.onclick = () => document.getElementById("musician-gallery-input").click();
+        addBtn.innerHTML = `
+            <span class="text-2xl group-hover:scale-110 transition-transform">➕</span>
+            <span class="text-[10px] font-bold mt-1">Agregar</span>
+        `;
+        grid.appendChild(addBtn);
+    }
+}
+
+async function handleMusicianGalleryUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (musicianGallery.length >= 6) {
+        showDashboardAlert("Has alcanzado el límite de 6 fotos en la galería", "error");
+        return;
+    }
+
+    try {
+        const compressed = await compressImage(file, 1200, 1200, 0.78);
+        musicianGallery.push(compressed);
+        renderMusicianGallery();
+    } catch (e) {
+        showDashboardAlert("Error al procesar la foto", "error");
+    } finally {
+        event.target.value = "";
+    }
+}
+
+function removeMusicianGalleryImage(index) {
+    musicianGallery.splice(index, 1);
+    renderMusicianGallery();
+}
+
 async function saveMusicianProfile(event) {
     event.preventDefault();
     const payload = {
@@ -319,6 +652,8 @@ async function saveMusicianProfile(event) {
         genre: document.getElementById("musician-genre").value.trim(),
         bio: document.getElementById("musician-bio").value.trim(),
         links: document.getElementById("musician-links").value.trim(),
+        photo_url: musicianPhoto,
+        gallery_images: musicianGallery,
         setup_description: document.getElementById("musician-setup").value.trim(),
         technical_rider: document.getElementById("musician-rider").value.trim()
     };
@@ -502,12 +837,22 @@ async function renderAdminView() {
             items.forEach(item => {
                 const row = document.createElement("tr");
                 
-                // Formatear detalles según rol
+                // Formatear detalles y galería según rol
                 let detailHtml = "";
                 let roleTag = "";
+                let avatarThumb = "";
 
                 if (item.role === "brand") {
                     roleTag = `<span class="inline-block px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider bg-sky-950 text-sky-400 border border-sky-900">Marca</span>`;
+                    
+                    if (item.details.logo_url) {
+                        avatarThumb = `<img src="${item.details.logo_url}" onclick="openLightbox('${item.details.logo_url}', '${item.details.name || 'Logo Marca'}')" class="w-10 h-10 rounded-xl object-cover border border-sky-500/40 cursor-pointer shadow-sm flex-shrink-0" title="Ver logo">`;
+                    } else if (item.avatar_url) {
+                        avatarThumb = `<img src="${item.avatar_url}" onclick="openLightbox('${item.avatar_url}', '${item.full_name || 'Avatar'}')" class="w-10 h-10 rounded-full object-cover border border-sky-500/40 cursor-pointer shadow-sm flex-shrink-0" title="Ver avatar">`;
+                    } else {
+                        avatarThumb = `<div class="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-lg flex-shrink-0">🔌</div>`;
+                    }
+
                     detailHtml = `
                         <div class="text-xs">
                             <span class="block text-zinc-400">Espacio: <strong class="text-zinc-200">${item.details.space_requested} m²</strong></span>
@@ -515,8 +860,31 @@ async function renderAdminView() {
                             <span class="block text-zinc-400">Productos: ${item.details.products || 'N/A'}</span>
                         </div>
                     `;
+
+                    if (item.details.gallery_images && item.details.gallery_images.length > 0) {
+                        let gHtml = `
+                            <div class="mt-2.5">
+                                <span class="block text-[10px] uppercase font-bold text-sky-400 mb-1">Galería (${item.details.gallery_images.length} fotos):</span>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                        `;
+                        item.details.gallery_images.forEach((img, gIdx) => {
+                            gHtml += `<img src="${img}" onclick="openLightbox('${img}', '${item.details.name || 'Marca'} - Foto ${gIdx+1}')" class="w-8 h-8 rounded-lg object-cover border border-zinc-700 hover:border-sky-400 cursor-pointer transition transform hover:scale-110 shadow-sm" title="Ver imagen">`;
+                        });
+                        gHtml += `</div></div>`;
+                        detailHtml += gHtml;
+                    }
+
                 } else if (item.role === "musician") {
                     roleTag = `<span class="inline-block px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider bg-purple-950 text-purple-400 border border-purple-900">Músico</span>`;
+                    
+                    if (item.details.photo_url) {
+                        avatarThumb = `<img src="${item.details.photo_url}" onclick="openLightbox('${item.details.photo_url}', '${item.details.name || 'Foto Prensa'}')" class="w-10 h-10 rounded-xl object-cover border border-purple-500/40 cursor-pointer shadow-sm flex-shrink-0" title="Ver foto prensa">`;
+                    } else if (item.avatar_url) {
+                        avatarThumb = `<img src="${item.avatar_url}" onclick="openLightbox('${item.avatar_url}', '${item.full_name || 'Avatar'}')" class="w-10 h-10 rounded-full object-cover border border-purple-500/40 cursor-pointer shadow-sm flex-shrink-0" title="Ver avatar">`;
+                    } else {
+                        avatarThumb = `<div class="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-lg flex-shrink-0">🎙️</div>`;
+                    }
+
                     detailHtml = `
                         <div class="text-xs">
                             <span class="block text-zinc-400">Género: <strong class="text-zinc-200">${item.details.genre}</strong></span>
@@ -524,8 +892,29 @@ async function renderAdminView() {
                             <span class="block text-zinc-400">Equipos: ${item.details.setup_description || 'N/A'}</span>
                         </div>
                     `;
+
+                    if (item.details.gallery_images && item.details.gallery_images.length > 0) {
+                        let gHtml = `
+                            <div class="mt-2.5">
+                                <span class="block text-[10px] uppercase font-bold text-purple-400 mb-1">Galería (${item.details.gallery_images.length} fotos):</span>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                        `;
+                        item.details.gallery_images.forEach((img, gIdx) => {
+                            gHtml += `<img src="${img}" onclick="openLightbox('${img}', '${item.details.name || 'Músico'} - Setup ${gIdx+1}')" class="w-8 h-8 rounded-lg object-cover border border-zinc-700 hover:border-purple-400 cursor-pointer transition transform hover:scale-110 shadow-sm" title="Ver imagen">`;
+                        });
+                        gHtml += `</div></div>`;
+                        detailHtml += gHtml;
+                    }
+
                 } else if (item.role === "collaborator") {
                     roleTag = `<span class="inline-block px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider bg-emerald-950 text-emerald-400 border border-emerald-900">Colaborador</span>`;
+                    
+                    if (item.avatar_url) {
+                        avatarThumb = `<img src="${item.avatar_url}" onclick="openLightbox('${item.avatar_url}', '${item.full_name || 'Colaborador'}')" class="w-10 h-10 rounded-full object-cover border border-emerald-500/40 cursor-pointer shadow-sm flex-shrink-0" title="Ver foto">`;
+                    } else {
+                        avatarThumb = `<div class="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-lg flex-shrink-0">🤝</div>`;
+                    }
+
                     detailHtml = `
                         <div class="text-xs">
                             <span class="block text-zinc-400">Áreas: <strong class="text-emerald-400">${item.details.areas_of_interest || 'N/A'}</strong></span>
@@ -548,7 +937,13 @@ async function renderAdminView() {
 
                 row.innerHTML = `
                     <td class="py-4">
-                        <span class="block font-bold text-zinc-200">${item.details.name || 'Sin nombre'}</span>
+                        <div class="flex items-center gap-3">
+                            ${avatarThumb}
+                            <div>
+                                <span class="block font-bold text-zinc-200 leading-tight">${item.details.name || 'Sin nombre'}</span>
+                                <span class="text-[11px] text-zinc-500">${item.created_at}</span>
+                            </div>
+                        </div>
                     </td>
                     <td class="py-4">${roleTag}</td>
                     <td class="py-4">
