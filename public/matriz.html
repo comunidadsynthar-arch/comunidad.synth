@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-[#030305] text-white">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Matriz de Arte · Synth Argentina ⚡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Zero-UI Matrix Scrollbars & Resets */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #030305;
+            color: #ffffff;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* 2D Scroll-Snap Container (Vertical) */
+        #matrix-vertical {
+            width: 100vw;
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            scroll-behavior: smooth;
+        }
+        #matrix-vertical::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Artist / Brand Row (100vh) */
+        .artist-row {
+            width: 100vw;
+            height: 100vh;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Horizontal Slide Container */
+        .matrix-horizontal {
+            display: flex;
+            flex-direction: row;
+            width: 100vw;
+            height: 100vh;
+            overflow-x: scroll;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            scroll-behavior: smooth;
+        }
+        .matrix-horizontal::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Matrix Slide (100vw x 100vh) */
+        .matrix-slide {
+            min-width: 100vw;
+            width: 100vw;
+            height: 100vh;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-color: #030305;
+            cursor: pointer;
+        }
+
+        /* Ambient blurred background aura */
+        .ambient-backdrop {
+            position: absolute;
+            inset: -20px;
+            background-size: cover;
+            background-position: center;
+            filter: blur(40px) brightness(0.22);
+            transform: scale(1.1);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Foreground Image */
+        .slide-image {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Subtle grid lines */
+        .synth-grid {
+            background-size: 50px 50px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="relative synth-grid antialiased">
+
+    <!-- Minimalist Floating Top HUD (Zero-UI: Non-intrusive, subtle glassmorphism) -->
+    <header class="fixed top-3 left-3 right-3 z-40 flex items-center justify-between pointer-events-none transition-opacity duration-300" id="top-hud">
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <a href="/dashboard" class="bg-black/60 hover:bg-zinc-900/90 text-zinc-300 hover:text-white border border-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 shadow-lg">
+                <span>←</span> <span class="hidden sm:inline">Panel</span>
+            </a>
+            <div class="bg-black/60 border border-white/10 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-black tracking-wider text-sky-400 flex items-center gap-1.5 shadow-lg">
+                <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+                <span>MATRIZ DE ARTE</span>
+            </div>
+        </div>
+
+        <!-- Filter pills & Fullscreen button -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <div class="bg-black/60 border border-white/10 backdrop-blur-md p-0.5 rounded-full flex text-[11px] font-bold shadow-lg">
+                <button onclick="setFilter('all')" id="filter-all" class="px-3 py-1 rounded-full bg-sky-500 text-zinc-950 transition">Todos</button>
+                <button onclick="setFilter('musician')" id="filter-musician" class="px-3 py-1 rounded-full text-zinc-400 hover:text-white transition">Músicos</button>
+                <button onclick="setFilter('brand')" id="filter-brand" class="px-3 py-1 rounded-full text-zinc-400 hover:text-white transition">Marcas</button>
+            </div>
+            <button onclick="toggleFullscreen()" class="bg-black/60 hover:bg-zinc-900/90 text-zinc-400 hover:text-white border border-white/10 backdrop-blur-md w-8 h-8 rounded-full flex items-center justify-center text-xs transition shadow-lg" title="Pantalla Completa">
+                ⛶
+            </button>
+        </div>
+    </header>
+
+    <!-- Discreet Bottom Orientation HUD -->
+    <div class="fixed bottom-4 left-4 right-4 z-40 flex items-end justify-between pointer-events-none transition-opacity duration-300" id="bottom-hud">
+        <!-- Current Artist / Slide Mini Tag -->
+        <div class="bg-black/60 border border-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs text-zinc-300 shadow-lg flex items-center gap-2 pointer-events-auto">
+            <span id="hud-artist-name" class="font-bold text-white">Cargando...</span>
+            <span class="text-zinc-600">·</span>
+            <span id="hud-chapter-badge" class="text-sky-400 font-semibold text-[11px]">Foto 1</span>
+        </div>
+
+        <!-- Slide progress indicators / dots -->
+        <div id="hud-dots" class="bg-black/60 border border-white/10 backdrop-blur-md px-3 py-1.5 rounded-full text-[11px] font-bold text-zinc-400 shadow-lg flex items-center gap-1.5 pointer-events-auto">
+            <span id="hud-slide-counter">1 / 1</span>
+        </div>
+    </div>
+
+    <!-- First Visit Floating Hint (Auto-dismisses after 6s or upon first interaction) -->
+    <div id="onboarding-hint" class="fixed bottom-16 left-1/2 -translate-x-1/2 z-40 bg-zinc-900/95 border border-sky-500/40 text-zinc-200 backdrop-blur-xl px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl flex items-center gap-3 transition-all duration-500 pointer-events-none text-center max-w-[90vw]">
+        <span class="text-lg">🎛️</span>
+        <div>
+            <div class="text-sky-400 font-bold tracking-wide text-[11px] uppercase">Navegación Matricial 2D</div>
+            <div class="text-zinc-300 text-[11px]">↕ Deslizá para cambiar de artista · ↔ Recorré fotos · Mantené presionado 3s para información</div>
+        </div>
+    </div>
+
+    <!-- 3-Second Hold Animated Ring Indicator -->
+    <div id="hold-indicator" class="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-150 flex flex-col items-center justify-center">
+        <div class="relative w-24 h-24 flex items-center justify-center">
+            <svg class="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.15)" stroke-width="6" fill="none" />
+                <circle id="hold-ring-progress" cx="50" cy="50" r="42" stroke="#38bdf8" stroke-width="6" fill="none"
+                    stroke-dasharray="263.89" stroke-dashoffset="263.89" stroke-linecap="round" />
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span class="text-[10px] font-black tracking-widest text-sky-400 uppercase">FICHA</span>
+                <span id="hold-seconds" class="text-xs text-white font-bold">3s</span>
+            </div>
+        </div>
+        <span class="mt-2 text-[10px] font-semibold text-white/90 bg-black/75 backdrop-blur-md px-3 py-1 rounded-full border border-white/15 shadow-xl">
+            Mantén presionado...
+        </span>
+    </div>
+
+    <!-- Main 2D Matrix Scroll Container -->
+    <main id="matrix-vertical" class="w-full h-full">
+        <!-- Dynamically injected rows by JS -->
+        <div id="loading-state" class="w-full h-full flex flex-col items-center justify-center">
+            <div class="w-12 h-12 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="mt-4 text-xs font-bold text-sky-400 tracking-widest uppercase">Sincronizando Matriz de Arte...</p>
+        </div>
+    </main>
+
+    <!-- "Ficha Frecuencia" Modal Overlay (Revealed after 3-second hold) -->
+    <div id="frequency-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 transition-all duration-300" onclick="closeFrequencyModal()">
+        <div class="relative w-full max-w-xl bg-zinc-950/95 border border-zinc-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl text-left transform transition-all duration-300 max-h-[88vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <!-- Top bar in modal -->
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+                <div class="flex items-center gap-2">
+                    <span id="modal-role-badge" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800">
+                        Artista
+                    </span>
+                    <span id="modal-chapter-badge" class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                        Foto 1 de 7
+                    </span>
+                </div>
+                <button type="button" onclick="closeFrequencyModal()" class="text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition shadow">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Artist / Brand Name -->
+            <h2 id="modal-artist-name" class="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+                Nombre del Artista
+            </h2>
+            <p id="modal-artist-tag" class="text-xs sm:text-sm text-sky-400 font-semibold tracking-wider uppercase mt-1">
+                Género / Categoría
+            </p>
+
+            <!-- Chapter Heading -->
+            <div class="mt-5 pt-3 border-t border-zinc-800/80">
+                <h3 id="modal-chapter-title" class="text-sm sm:text-base font-bold text-zinc-200">
+                    Capítulo
+                </h3>
+            </div>
+
+            <!-- Caption text (The custom frequency information) -->
+            <div class="mt-3">
+                <p id="modal-caption-text" class="text-sm sm:text-base text-zinc-300 leading-relaxed whitespace-pre-line">
+                    Contenido textual del capítulo...
+                </p>
+            </div>
+
+            <!-- Links & Action buttons if available -->
+            <div id="modal-links-container" class="mt-6 pt-4 border-t border-zinc-800/80 flex flex-wrap gap-2">
+                <!-- Injected links -->
+            </div>
+
+            <!-- Bottom tip -->
+            <p class="text-[11px] text-zinc-500 text-center mt-6">
+                💡 Tocá en cualquier lugar para cerrar y volver a la imagen.
+            </p>
+        </div>
+    </div>
+
+    <!-- Logic Script for 2D Matrix & 3-Second Hold -->
+    <script>
+        // Matrix State
+        let allItems = [];
+        let currentFilter = 'all';
+        let activeRowIndex = 0;
+        let activeSlideIndex = 0;
+
+        // Hold-to-Reveal Timer & Touch State
+        let holdTimer = null;
+        let holdStartTime = 0;
+        let holdStartX = 0;
+        let holdStartY = 0;
+        let holdTargetSlide = null;
+        const HOLD_DURATION = 3000; // 3 seconds
+        const CIRCUMFERENCE = 263.89; // 2 * PI * 42
+
+        const MUSICIAN_DEFAULT_CHAPTERS = [
+            "El Arsenal & Máquinas (Setup)",
+            "Método & Proceso Creativo",
+            "Obra Destacada / Lanzamiento Insignia",
+            "Influencias & Sonidos de Referencia",
+            "La Experiencia en Synth Argentina 2026",
+            "Canales de Conexión & Enlaces Directos"
+        ];
+
+        const BRAND_DEFAULT_CHAPTERS = [
+            "Hardware & Instrumentos Destacados",
+            "Diseño, Circuitos & Filosofía de Fabricación",
+            "Lanzamiento Insignia / Novedad 2026",
+            "Inspiración & Trayectoria en la Luthería",
+            "La Experiencia en Synth Argentina 2026",
+            "Canales de Venta & Contacto Directo"
+        ];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchMatrixData();
+            initHoldGesture();
+            initKeyboardNav();
+            initScrollObservers();
+            
+            // Auto dismiss onboarding hint after 6s
+            setTimeout(() => {
+                dismissOnboardingHint();
+            }, 6000);
+        });
+
+        function dismissOnboardingHint() {
+            const hint = document.getElementById("onboarding-hint");
+            if (hint) {
+                hint.classList.add("opacity-0", "translate-y-4");
+                setTimeout(() => hint.remove(), 500);
+            }
+        }
+
+        async function fetchMatrixData() {
+            try {
+                const res = await fetch("/api/matrix/items");
+                if (res.ok) {
+                    allItems = await res.json();
+                    renderMatrix();
+                } else {
+                    renderEmptyState("No se pudo cargar la galería de la matriz.");
+                }
+            } catch (err) {
+                console.error("Error cargando matriz:", err);
+                renderEmptyState("Error de conexión al obtener la Matriz de Arte.");
+            }
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            ['all', 'musician', 'brand'].forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                if (btn) {
+                    if (f === filter) {
+                        btn.className = "px-3 py-1 rounded-full bg-sky-500 text-zinc-950 transition";
+                    } else {
+                        btn.className = "px-3 py-1 rounded-full text-zinc-400 hover:text-white transition";
+                    }
+                }
+            });
+            renderMatrix();
+        }
+
+        function getFilteredItems() {
+            if (currentFilter === 'musician') {
+                return allItems.filter(item => item.role === 'musician');
+            } else if (currentFilter === 'brand') {
+                return allItems.filter(item => item.role === 'brand');
+            }
+            return allItems;
+        }
+
+        function renderMatrix() {
+            const container = document.getElementById("matrix-vertical");
+            const items = getFilteredItems();
+
+            if (!items || items.length === 0) {
+                renderEmptyState("No hay artistas ni marcas con fotos cargadas para este filtro.");
+                return;
+            }
+
+            container.innerHTML = "";
+
+            items.forEach((item, rIdx) => {
+                const row = document.createElement("section");
+                row.className = "artist-row";
+                row.id = `artist-row-${rIdx}`;
+                row.dataset.artistIndex = rIdx;
+                row.dataset.artistName = item.name;
+                row.dataset.artistRole = item.role;
+                row.dataset.artistTag = item.tag;
+
+                const slider = document.createElement("div");
+                slider.className = "matrix-horizontal";
+                slider.id = `slider-${rIdx}`;
+
+                // Slide 1: Main Photo (Press photo or Logo) + Bio / Manifiesto
+                const mainPhoto = item.main_photo || "/static/logo.jpg";
+                const slide1 = createSlideElement({
+                    image: mainPhoto,
+                    artistName: item.name,
+                    role: item.role,
+                    tag: item.tag,
+                    chapterNum: 1,
+                    totalChapters: 1 + (item.gallery ? item.gallery.length : 0),
+                    chapterTitle: item.role === "musician" ? "Bio & Manifiesto Artístico" : "Manifiesto de Marca",
+                    caption: item.bio || "Bio y presentación del artista en Synth Argentina.",
+                    links: item.links
+                });
+                slider.appendChild(slide1);
+
+                // Slides 2 to 7: Gallery Photos with their structured chapters
+                if (Array.isArray(item.gallery)) {
+                    item.gallery.forEach((gItem, gIdx) => {
+                        const imgSrc = typeof gItem === "object" ? gItem.image : gItem;
+                        if (!imgSrc) return;
+
+                        const defaultTitles = item.role === "musician" ? MUSICIAN_DEFAULT_CHAPTERS : BRAND_DEFAULT_CHAPTERS;
+                        const chapterTitle = (typeof gItem === "object" && gItem.title) 
+                            ? gItem.title 
+                            : (defaultTitles[gIdx] || `Capítulo ${gIdx + 1}`);
+
+                        const caption = (typeof gItem === "object" && gItem.caption) 
+                            ? gItem.caption 
+                            : (item.setup || "Registro visual del artista en Synth Argentina.");
+
+                        const slide = createSlideElement({
+                            image: imgSrc,
+                            artistName: item.name,
+                            role: item.role,
+                            tag: item.tag,
+                            chapterNum: gIdx + 2,
+                            totalChapters: 1 + item.gallery.length,
+                            chapterTitle: chapterTitle,
+                            caption: caption,
+                            links: item.links
+                        });
+                        slider.appendChild(slide);
+                    });
+                }
+
+                row.appendChild(slider);
+                container.appendChild(row);
+            });
+
+            updateHUD();
+            bindSliderScrolls();
+        }
+
+        function createSlideElement(data) {
+            const slide = document.createElement("div");
+            slide.className = "matrix-slide";
+            slide.dataset.artistName = data.artistName;
+            slide.dataset.artistRole = data.role;
+            slide.dataset.artistTag = data.tag;
+            slide.dataset.chapterNum = data.chapterNum;
+            slide.dataset.totalChapters = data.totalChapters;
+            slide.dataset.chapterTitle = data.chapterTitle;
+            slide.dataset.caption = data.caption;
+            slide.dataset.links = data.links || "";
+            slide.dataset.image = data.image;
+
+            slide.innerHTML = `
+                <div class="ambient-backdrop" style="background-image: url('${data.image}');"></div>
+                <img src="${data.image}" class="slide-image" alt="${data.chapterTitle}" loading="lazy">
+            `;
+
+            return slide;
+        }
+
+        function renderEmptyState(message) {
+            const container = document.getElementById("matrix-vertical");
+            container.innerHTML = `
+                <div class="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+                    <span class="text-5xl mb-4">🎛️</span>
+                    <h2 class="text-xl font-bold text-white mb-2">Matriz de Arte en Curaduría</h2>
+                    <p class="text-sm text-zinc-400 max-w-md mb-6">${message}</p>
+                    <a href="/dashboard" class="bg-sky-500 hover:bg-sky-400 text-zinc-950 font-bold px-5 py-2.5 rounded-xl transition text-xs">
+                        Ingresar a Cargar mi Perfil
+                    </a>
+                </div>
+            `;
+            document.getElementById("hud-artist-name").textContent = "Sin contenido";
+            document.getElementById("hud-chapter-badge").textContent = "";
+            document.getElementById("hud-slide-counter").textContent = "0 / 0";
+        }
+
+        // --- 3-Second Hold to Reveal Implementation ---
+        function initHoldGesture() {
+            const container = document.getElementById("matrix-vertical");
+            const indicator = document.getElementById("hold-indicator");
+            const ringProgress = document.getElementById("hold-ring-progress");
+
+            function onPointerDown(e) {
+                // Ignore touches on HUD or modals
+                if (e.target.closest('#top-hud') || e.target.closest('#bottom-hud') || e.target.closest('#frequency-modal')) {
+                    return;
+                }
+
+                dismissOnboardingHint();
+
+                const slide = e.target.closest('.matrix-slide') || document.elementFromPoint(e.clientX, e.clientY)?.closest('.matrix-slide');
+                if (!slide) return;
+
+                holdTargetSlide = slide;
+                holdStartTime = Date.now();
+                holdStartX = e.clientX;
+                holdStartY = e.clientY;
+
+                // Position indicator near finger/cursor, bounded by viewport
+                const x = Math.min(Math.max(e.clientX, 60), window.innerWidth - 60);
+                const y = Math.min(Math.max(e.clientY - 40, 70), window.innerHeight - 80);
+                indicator.style.left = `${x}px`;
+                indicator.style.top = `${y}px`;
+
+                // Reset and animate progress ring
+                ringProgress.style.transition = 'none';
+                ringProgress.style.strokeDashoffset = `${CIRCUMFERENCE}`;
+                ringProgress.getBoundingClientRect(); // force reflow
+
+                ringProgress.style.transition = `stroke-dashoffset ${HOLD_DURATION}ms linear`;
+                ringProgress.style.strokeDashoffset = '0';
+
+                indicator.classList.remove("opacity-0");
+                indicator.classList.add("opacity-100");
+
+                // Start hold timer
+                clearTimeout(holdTimer);
+                holdTimer = setTimeout(() => {
+                    triggerReveal(holdTargetSlide);
+                    cancelHold();
+                }, HOLD_DURATION);
+            }
+
+            function onPointerMove(e) {
+                if (!holdTimer) return;
+                const deltaX = Math.abs(e.clientX - holdStartX);
+                const deltaY = Math.abs(e.clientY - holdStartY);
+                // If dragged more than 12px, cancel hold (user is swiping/scrolling)
+                if (deltaX > 12 || deltaY > 12) {
+                    cancelHold();
+                }
+            }
+
+            function onPointerUp() {
+                cancelHold();
+            }
+
+            container.addEventListener('pointerdown', onPointerDown);
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+            window.addEventListener('pointercancel', onPointerUp);
+        }
+
+        function cancelHold() {
+            clearTimeout(holdTimer);
+            holdTimer = null;
+            const indicator = document.getElementById("hold-indicator");
+            const ringProgress = document.getElementById("hold-ring-progress");
+            if (indicator) {
+                indicator.classList.remove("opacity-100");
+                indicator.classList.add("opacity-0");
+            }
+            if (ringProgress) {
+                ringProgress.style.transition = 'none';
+                ringProgress.style.strokeDashoffset = `${CIRCUMFERENCE}`;
+            }
+        }
+
+        function triggerReveal(slide) {
+            if (!slide) return;
+            if (navigator.vibrate) {
+                try { navigator.vibrate([40, 40]); } catch (e) {}
+            }
+
+            const modal = document.getElementById("frequency-modal");
+            const roleBadge = document.getElementById("modal-role-badge");
+            const chapterBadge = document.getElementById("modal-chapter-badge");
+            const nameEl = document.getElementById("modal-artist-name");
+            const tagEl = document.getElementById("modal-artist-tag");
+            const titleEl = document.getElementById("modal-chapter-title");
+            const captionEl = document.getElementById("modal-caption-text");
+            const linksContainer = document.getElementById("modal-links-container");
+
+            const role = slide.dataset.artistRole;
+            roleBadge.textContent = role === "brand" ? "Marca Expositora" : "Músico / Artista";
+            roleBadge.className = role === "brand" 
+                ? "text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800"
+                : "text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-950 text-purple-400 border border-purple-800";
+
+            chapterBadge.textContent = `Foto ${slide.dataset.chapterNum} de ${slide.dataset.totalChapters}`;
+            nameEl.textContent = slide.dataset.artistName;
+            tagEl.textContent = slide.dataset.artistTag || "";
+            titleEl.textContent = slide.dataset.chapterTitle || "Información del Capítulo";
+            captionEl.textContent = slide.dataset.caption || "Sin texto provisto por el artista.";
+
+            // Render links
+            linksContainer.innerHTML = "";
+            const linksRaw = slide.dataset.links;
+            if (linksRaw && linksRaw.trim() !== "") {
+                const links = linksRaw.split(/[,\s]+/).filter(l => l.startsWith("http://") || l.startsWith("https://") || l.includes(".com") || l.startsWith("@"));
+                if (links.length > 0) {
+                    links.forEach(link => {
+                        const href = link.startsWith("http") ? link : `https://${link}`;
+                        const a = document.createElement("a");
+                        a.href = href;
+                        a.target = "_blank";
+                        a.rel = "noopener noreferrer";
+                        a.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-sky-400 text-xs font-semibold transition";
+                        a.innerHTML = `<span>🔗</span> <span>${link.replace(/^https?:\/\//, '')}</span>`;
+                        linksContainer.appendChild(a);
+                    });
+                }
+            }
+
+            modal.classList.remove("hidden");
+        }
+
+        function closeFrequencyModal() {
+            const modal = document.getElementById("frequency-modal");
+            if (modal) modal.classList.add("hidden");
+        }
+
+        // --- Keyboard Navigation ---
+        function initKeyboardNav() {
+            window.addEventListener("keydown", (e) => {
+                if (document.getElementById("frequency-modal") && !document.getElementById("frequency-modal").classList.contains("hidden")) {
+                    if (e.key === "Escape") closeFrequencyModal();
+                    return;
+                }
+
+                const container = document.getElementById("matrix-vertical");
+                const rows = document.querySelectorAll(".artist-row");
+                if (rows.length === 0) return;
+
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    if (activeRowIndex < rows.length - 1) {
+                        rows[activeRowIndex + 1].scrollIntoView({ behavior: "smooth" });
+                    }
+                } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    if (activeRowIndex > 0) {
+                        rows[activeRowIndex - 1].scrollIntoView({ behavior: "smooth" });
+                    }
+                } else if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    const currentRow = rows[activeRowIndex];
+                    if (!currentRow) return;
+                    const slider = currentRow.querySelector(".matrix-horizontal");
+                    const slides = currentRow.querySelectorAll(".matrix-slide");
+                    if (slider && activeSlideIndex < slides.length - 1) {
+                        slides[activeSlideIndex + 1].scrollIntoView({ behavior: "smooth", inline: "start" });
+                    }
+                } else if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    const currentRow = rows[activeRowIndex];
+                    if (!currentRow) return;
+                    const slider = currentRow.querySelector(".matrix-horizontal");
+                    const slides = currentRow.querySelectorAll(".matrix-slide");
+                    if (slider && activeSlideIndex > 0) {
+                        slides[activeSlideIndex - 1].scrollIntoView({ behavior: "smooth", inline: "start" });
+                    }
+                } else if (e.key === " " || e.key === "Enter") {
+                    e.preventDefault();
+                    const currentRow = rows[activeRowIndex];
+                    const currentSlide = currentRow?.querySelectorAll(".matrix-slide")?.[activeSlideIndex];
+                    if (currentSlide) triggerReveal(currentSlide);
+                }
+            });
+        }
+
+        // --- Scroll Observers to track current Artist and Slide position ---
+        function initScrollObservers() {
+            const container = document.getElementById("matrix-vertical");
+
+            container.addEventListener("scroll", () => {
+                const rowHeight = window.innerHeight;
+                const newRowIndex = Math.round(container.scrollTop / rowHeight);
+                if (newRowIndex !== activeRowIndex) {
+                    activeRowIndex = newRowIndex;
+                    activeSlideIndex = 0;
+                    updateHUD();
+                }
+            }, { passive: true });
+        }
+
+        function bindSliderScrolls() {
+            const sliders = document.querySelectorAll(".matrix-horizontal");
+            sliders.forEach((slider, rIdx) => {
+                slider.addEventListener("scroll", () => {
+                    const slideWidth = window.innerWidth;
+                    const newSlideIndex = Math.round(slider.scrollLeft / slideWidth);
+                    if (rIdx === activeRowIndex && newSlideIndex !== activeSlideIndex) {
+                        activeSlideIndex = newSlideIndex;
+                        updateHUD();
+                    }
+                }, { passive: true });
+            });
+        }
+
+        function updateHUD() {
+            const rows = document.querySelectorAll(".artist-row");
+            if (rows.length === 0 || !rows[activeRowIndex]) return;
+
+            const currentRow = rows[activeRowIndex];
+            const slides = currentRow.querySelectorAll(".matrix-slide");
+            const currentSlide = slides[activeSlideIndex] || slides[0];
+            if (!currentSlide) return;
+
+            const artistName = currentSlide.dataset.artistName || "Artista";
+            const chapterNum = currentSlide.dataset.chapterNum || "1";
+            const totalChapters = currentSlide.dataset.totalChapters || "1";
+
+            document.getElementById("hud-artist-name").textContent = artistName;
+            document.getElementById("hud-chapter-badge").textContent = `Foto ${chapterNum}`;
+            document.getElementById("hud-slide-counter").textContent = `${chapterNum} / ${totalChapters}`;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log("Error al activar pantalla completa:", err);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

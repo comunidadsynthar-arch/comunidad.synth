@@ -7,8 +7,34 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
-from typing import Optional, List
+from typing import Optional, List, Any
 from pydantic import BaseModel
+
+def normalize_gallery(gallery_raw):
+    """Normalizes gallery items to list of { image: str, caption: str } objects"""
+    if not gallery_raw:
+        return []
+    if isinstance(gallery_raw, str):
+        try:
+            gallery_raw = json.loads(gallery_raw)
+        except Exception:
+            return []
+    if not isinstance(gallery_raw, list):
+        return []
+    
+    normalized = []
+    for item in gallery_raw[:6]:
+        if isinstance(item, dict):
+            normalized.append({
+                "image": item.get("image", ""),
+                "caption": item.get("caption", "")
+            })
+        elif isinstance(item, str):
+            normalized.append({
+                "image": item,
+                "caption": ""
+            })
+    return normalized
 
 from backend.database import engine, get_db, Base
 from backend.models import User, BrandProfile, MusicianProfile, CollaboratorProfile, Donation
@@ -65,7 +91,7 @@ class BrandProfileRequest(BaseModel):
     description: Optional[str] = ""
     website: Optional[str] = ""
     logo_url: Optional[str] = ""
-    gallery_images: Optional[List[str]] = []
+    gallery_images: Optional[List[Any]] = []
     space_requested: float
     electricity_needs: str
     products: Optional[str] = ""
@@ -76,7 +102,7 @@ class MusicianProfileRequest(BaseModel):
     bio: Optional[str] = ""
     links: Optional[str] = ""
     photo_url: Optional[str] = ""
-    gallery_images: Optional[List[str]] = []
+    gallery_images: Optional[List[Any]] = []
     setup_description: Optional[str] = ""
     technical_rider: Optional[str] = ""
 
@@ -234,12 +260,7 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
     
     brand_data = None
     if current_user.brand_profile:
-        brand_gallery = []
-        if current_user.brand_profile.gallery_images:
-            try:
-                brand_gallery = json.loads(current_user.brand_profile.gallery_images)
-            except Exception:
-                brand_gallery = []
+        brand_gallery = normalize_gallery(current_user.brand_profile.gallery_images)
         brand_data = {
             "brand_name": current_user.brand_profile.brand_name,
             "description": current_user.brand_profile.description,
@@ -253,12 +274,7 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
         
     musician_data = None
     if current_user.musician_profile:
-        musician_gallery = []
-        if current_user.musician_profile.gallery_images:
-            try:
-                musician_gallery = json.loads(current_user.musician_profile.gallery_images)
-            except Exception:
-                musician_gallery = []
+        musician_gallery = normalize_gallery(current_user.musician_profile.gallery_images)
         musician_data = {
             "artist_name": current_user.musician_profile.artist_name,
             "genre": current_user.musician_profile.genre,
@@ -477,12 +493,7 @@ def get_registrations(current_user: User = Depends(get_current_user), db: Sessio
     for u in users:
         detail = {}
         if u.role == "brand" and u.brand_profile:
-            b_gallery = []
-            if u.brand_profile.gallery_images:
-                try:
-                    b_gallery = json.loads(u.brand_profile.gallery_images)
-                except Exception:
-                    b_gallery = []
+            b_gallery = normalize_gallery(u.brand_profile.gallery_images)
             detail = {
                 "name": u.brand_profile.brand_name,
                 "description": u.brand_profile.description,
@@ -494,12 +505,7 @@ def get_registrations(current_user: User = Depends(get_current_user), db: Sessio
                 "products": u.brand_profile.products
             }
         elif u.role == "musician" and u.musician_profile:
-            m_gallery = []
-            if u.musician_profile.gallery_images:
-                try:
-                    m_gallery = json.loads(u.musician_profile.gallery_images)
-                except Exception:
-                    m_gallery = []
+            m_gallery = normalize_gallery(u.musician_profile.gallery_images)
             detail = {
                 "name": u.musician_profile.artist_name,
                 "genre": u.musician_profile.genre,
@@ -560,6 +566,54 @@ def reject_user(user_id: int, current_user: User = Depends(get_current_user), db
     db.commit()
     return {"message": f"Aprobación de {user.email} revocada"}
 
+# --- Matriz de Arte Public API ---
+
+@app.get("/api/matrix/items")
+@app.get("/matrix/items")
+def get_matrix_items(db: Session = Depends(get_db)):
+    """Public endpoint returning approved artists and brands formatted for the Matriz de Arte 2D view."""
+    users = db.query(User).filter(
+        User.role.in_(["musician", "brand"]),
+        User.is_approved == True
+    ).all()
+
+    # If no approved users yet, include any existing musician/brand so the matrix isn't empty during testing
+    if not users:
+        users = db.query(User).filter(User.role.in_(["musician", "brand"])).all()
+
+    results = []
+    for u in users:
+        if u.role == "musician" and u.musician_profile:
+            m = u.musician_profile
+            gallery = normalize_gallery(m.gallery_images)
+            results.append({
+                "id": u.id,
+                "role": "musician",
+                "name": m.artist_name or u.full_name or "Artista Synth",
+                "tag": m.genre or "Música Electrónica / Modular",
+                "bio": m.bio or "",
+                "links": m.links or "",
+                "setup": m.setup_description or "",
+                "main_photo": m.photo_url or u.avatar_url or "",
+                "gallery": gallery
+            })
+        elif u.role == "brand" and u.brand_profile:
+            b = u.brand_profile
+            gallery = normalize_gallery(b.gallery_images)
+            results.append({
+                "id": u.id,
+                "role": "brand",
+                "name": b.brand_name or u.full_name or "Marca Expositora",
+                "tag": "Fabricante / Hardware Synth",
+                "bio": b.description or "",
+                "links": b.website or "",
+                "setup": b.products or "",
+                "main_photo": b.logo_url or u.avatar_url or "",
+                "gallery": gallery
+            })
+
+    return results
+
 # --- Serving Frontend & Fallbacks ---
 
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
@@ -578,6 +632,14 @@ def read_index():
     if index_file.exists():
         return FileResponse(str(index_file))
     return {"message": "Synth Argentina API is running"}
+
+@app.get("/matriz")
+@app.get("/matriz.html")
+def read_matriz():
+    matriz_file = SERVE_DIR / "matriz.html"
+    if matriz_file.exists():
+        return FileResponse(str(matriz_file))
+    return {"message": "Matriz de Arte"}
 
 @app.get("/login")
 @app.get("/login.html")

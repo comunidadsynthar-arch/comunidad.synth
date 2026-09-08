@@ -5,6 +5,103 @@ let brandGallery = [];
 let musicianPhoto = "";
 let musicianGallery = [];
 
+// Matriz de Arte - 6 Capítulos Temáticos Sugeridos para Artistas
+const MUSICIAN_CHAPTERS = [
+    {
+        num: 1,
+        matrixPhoto: 2,
+        title: "El Arsenal & Máquinas (Setup)",
+        placeholder: "Describí tus sintetizadores principales, módulos Eurorack, sintetizadores analógicos, pedales o máquinas clave de tu sonido..."
+    },
+    {
+        num: 2,
+        matrixPhoto: 3,
+        title: "Método & Proceso Creativo",
+        placeholder: "Contanos tu flujo de trabajo: improvisación analógica, diseño de sonido desde cero, parches modulares, secuenciación..."
+    },
+    {
+        num: 3,
+        matrixPhoto: 4,
+        title: "Obra Destacada / Lanzamiento Insignia",
+        placeholder: "Tu último álbum, EP, track representativo o el proyecto insignia que venís a presentar a Synth Argentina..."
+    },
+    {
+        num: 4,
+        matrixPhoto: 5,
+        title: "Influencias & Sonidos de Referencia",
+        placeholder: "Discos, artistas de culto, bandas sonoras o estéticas sonoras que han moldeado tu universo musical..."
+    },
+    {
+        num: 5,
+        matrixPhoto: 6,
+        title: "La Experiencia en Synth Argentina 2026",
+        placeholder: "Qué va a vivir el público en tu presentación en vivo: atmósfera sonora, improvisación, visuales reactivas..."
+    },
+    {
+        num: 6,
+        matrixPhoto: 7,
+        title: "Canales de Conexión & Enlaces Directos",
+        placeholder: "Bandcamp, Spotify, YouTube, Instagram, web oficial o plataformas donde escuchar y adquirir tu música..."
+    }
+];
+
+// Matriz de Arte - 6 Capítulos Temáticos Sugeridos para Marcas / Fabricantes
+const BRAND_CHAPTERS = [
+    {
+        num: 1,
+        matrixPhoto: 2,
+        title: "Hardware & Instrumentos Destacados",
+        placeholder: "Presentá los sintetizadores, módulos Eurorack, pedales o controladores estrella que fabricás..."
+    },
+    {
+        num: 2,
+        matrixPhoto: 3,
+        title: "Diseño, Circuitos & Filosofía de Fabricación",
+        placeholder: "Contanos los secretos de tu ingeniería: diseño analógico, DSP digital, componentes seleccionados, calidez sonora..."
+    },
+    {
+        num: 3,
+        matrixPhoto: 4,
+        title: "Lanzamiento Insignia / Novedad 2026",
+        placeholder: "La última creación o prototipo que los asistentes van a poder probar en exclusiva en tu stand..."
+    },
+    {
+        num: 4,
+        matrixPhoto: 5,
+        title: "Inspiración & Trayectoria en la Luthería",
+        placeholder: "El origen de la marca, los clásicos que te inspiraron y la visión de la luthería electrónica nacional..."
+    },
+    {
+        num: 5,
+        matrixPhoto: 6,
+        title: "La Experiencia en Synth Argentina 2026",
+        placeholder: "Qué vas a ofrecer a quienes visiten tu stand: demostraciones interactivas, pruebas de sonido, charlas de armado..."
+    },
+    {
+        num: 6,
+        matrixPhoto: 7,
+        title: "Canales de Venta & Contacto Directo",
+        placeholder: "Tienda online, Instagram, distribuidores oficiales, WhatsApp o catálogo digital de productos..."
+    }
+];
+
+function parseGalleryToSlots(galleryRaw) {
+    const slots = Array.from({ length: 6 }, () => ({ image: "", caption: "" }));
+    if (!Array.isArray(galleryRaw)) return slots;
+    galleryRaw.slice(0, 6).forEach((item, idx) => {
+        if (typeof item === "string") {
+            slots[idx] = { image: item, caption: "" };
+        } else if (item && typeof item === "object") {
+            const targetIdx = (item.chapter && item.chapter >= 1 && item.chapter <= 6) ? (item.chapter - 1) : idx;
+            slots[targetIdx] = {
+                image: item.image || "",
+                caption: item.caption || ""
+            };
+        }
+    });
+    return slots;
+}
+
 // Canvas Image Compressor (Resize & compress to WebP/JPEG)
 function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.8) {
     return new Promise((resolve, reject) => {
@@ -403,10 +500,10 @@ function renderBrandView() {
         document.getElementById("brand-electricity").value = prof.electricity_needs || "220V - Simple";
         document.getElementById("brand-products").value = prof.products || "";
         brandLogo = prof.logo_url || "";
-        brandGallery = Array.isArray(prof.gallery_images) ? [...prof.gallery_images] : [];
+        brandGallery = parseGalleryToSlots(prof.gallery_images);
     } else {
         brandLogo = "";
-        brandGallery = [];
+        brandGallery = parseGalleryToSlots([]);
     }
 
     renderBrandLogoPreview();
@@ -462,85 +559,160 @@ function removeBrandLogo() {
     renderBrandLogoPreview();
 }
 
+function triggerChapterUpload(role, index) {
+    const input = document.getElementById(`${role}-chapter-file-${index}`);
+    if (input) input.click();
+}
+
+async function handleSingleChapterUpload(role, index, event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    try {
+        const compressed = await compressImage(file, 1200, 1200, 0.78);
+        if (role === "brand") {
+            if (!brandGallery[index]) brandGallery[index] = { image: "", caption: "" };
+            brandGallery[index].image = compressed;
+            renderBrandGallery();
+        } else {
+            if (!musicianGallery[index]) musicianGallery[index] = { image: "", caption: "" };
+            musicianGallery[index].image = compressed;
+            renderMusicianGallery();
+        }
+        showDashboardAlert(`¡Foto cargada para el Capítulo ${index + 1}!`);
+    } catch (e) {
+        showDashboardAlert("Error al procesar la foto", "error");
+    } finally {
+        event.target.value = "";
+    }
+}
+
+function updateChapterCaption(role, index, value) {
+    if (role === "brand") {
+        if (!brandGallery[index]) brandGallery[index] = { image: "", caption: "" };
+        brandGallery[index].caption = value;
+    } else {
+        if (!musicianGallery[index]) musicianGallery[index] = { image: "", caption: "" };
+        musicianGallery[index].caption = value;
+    }
+}
+
+function removeBrandChapterImage(index) {
+    if (brandGallery[index]) {
+        brandGallery[index].image = "";
+        renderBrandGallery();
+    }
+}
+
+function removeMusicianChapterImage(index) {
+    if (musicianGallery[index]) {
+        musicianGallery[index].image = "";
+        renderMusicianGallery();
+    }
+}
+
 function renderBrandGallery() {
     const grid = document.getElementById("brand-gallery-grid");
     const countEl = document.getElementById("brand-gallery-count");
     if (!grid) return;
 
-    if (countEl) countEl.textContent = `${brandGallery.length} / 6 fotos`;
+    const loadedCount = brandGallery.filter(s => s && s.image).length;
+    if (countEl) countEl.textContent = `${loadedCount} / 6 fotos`;
     grid.innerHTML = "";
 
-    brandGallery.forEach((imgUrl, idx) => {
+    BRAND_CHAPTERS.forEach((ch, idx) => {
+        const slot = brandGallery[idx] || { image: "", caption: "" };
+        const hasImg = Boolean(slot.image && slot.image.trim() !== "");
+
         const card = document.createElement("div");
-        card.className = "relative aspect-square rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 group shadow-sm";
+        card.className = "border border-zinc-800 bg-zinc-900/80 p-4 rounded-xl space-y-3 transition hover:border-zinc-700 shadow-sm";
         card.innerHTML = `
-            <img src="${imgUrl}" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform" onclick="openLightbox('${imgUrl}', 'Foto de producto / stand (${idx + 1})')" alt="Foto ${idx + 1}">
-            <button type="button" onclick="removeBrandGalleryImage(${idx})" title="Eliminar foto" class="absolute top-1.5 right-1.5 bg-black/75 hover:bg-rose-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition">
-                ✕
-            </button>
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-sky-400 px-2 py-0.5 rounded border border-zinc-700">
+                        Capítulo ${ch.num} · Foto ${ch.matrixPhoto} en Matriz
+                    </span>
+                    <h4 class="text-xs font-bold text-zinc-200">${ch.title}</h4>
+                </div>
+                <div>
+                    ${hasImg 
+                        ? '<span class="text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded flex items-center gap-1">✅ Foto lista</span>'
+                        : '<span class="text-[10px] text-zinc-500 font-medium bg-zinc-950/60 border border-zinc-800 px-2 py-0.5 rounded flex items-center gap-1">📷 Sin imagen</span>'
+                    }
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
+                <div class="sm:col-span-1 flex flex-col items-center">
+                    ${hasImg ? `
+                        <div class="relative w-full aspect-square rounded-lg overflow-hidden border border-zinc-700 bg-zinc-950 group">
+                            <img src="${slot.image}" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition" onclick="openLightbox('${slot.image}', '${ch.title}')" alt="${ch.title}">
+                            <button type="button" onclick="removeBrandChapterImage(${idx})" title="Eliminar foto" class="absolute top-1 right-1 bg-black/80 hover:bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold transition">✕</button>
+                        </div>
+                        <button type="button" onclick="triggerChapterUpload('brand', ${idx})" class="mt-2 text-[11px] text-zinc-400 hover:text-sky-400 underline transition">Cambiar foto</button>
+                    ` : `
+                        <div onclick="triggerChapterUpload('brand', ${idx})" class="w-full aspect-square rounded-lg border-2 border-dashed border-zinc-700 hover:border-sky-500 hover:bg-sky-950/20 flex flex-col items-center justify-center text-zinc-400 hover:text-sky-400 cursor-pointer transition p-2 text-center group">
+                            <span class="text-2xl group-hover:scale-110 transition-transform">📷</span>
+                            <span class="text-[11px] font-semibold mt-1">Subir foto</span>
+                        </div>
+                    `}
+                    <input type="file" id="brand-chapter-file-${idx}" accept="image/*" class="hidden" onchange="handleSingleChapterUpload('brand', ${idx}, event)">
+                </div>
+                <div class="sm:col-span-3 flex flex-col">
+                    <label class="block text-[11px] font-semibold text-zinc-400 mb-1">
+                        Ficha Frecuencia (Texto revelado al mantener presionado 3 seg)
+                    </label>
+                    <textarea id="brand-chapter-caption-${idx}" rows="3" placeholder="${ch.placeholder}" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-xs focus:outline-none focus:border-sky-500 text-zinc-200" oninput="updateChapterCaption('brand', ${idx}, this.value)">${slot.caption || ""}</textarea>
+                    <p class="text-[10px] text-zinc-500 mt-1">💡 Sugerencia: ${ch.placeholder}</p>
+                </div>
+            </div>
         `;
         grid.appendChild(card);
     });
-
-    if (brandGallery.length < 6) {
-        const addBtn = document.createElement("div");
-        addBtn.className = "aspect-square rounded-xl border-2 border-dashed border-zinc-700 hover:border-sky-500 hover:bg-sky-950/20 flex flex-col items-center justify-center text-zinc-400 hover:text-sky-400 cursor-pointer transition p-2 text-center group";
-        addBtn.onclick = () => document.getElementById("brand-gallery-input").click();
-        addBtn.innerHTML = `
-            <span class="text-2xl group-hover:scale-110 transition-transform">➕</span>
-            <span class="text-[10px] font-bold mt-1">Agregar</span>
-        `;
-        grid.appendChild(addBtn);
-    }
 }
 
 async function handleBrandGalleryUpload(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    const availableSlots = 6 - brandGallery.length;
-    if (availableSlots <= 0) {
-        showDashboardAlert("Has alcanzado el límite de 6 fotos en la galería", "error");
-        event.target.value = "";
-        return;
-    }
-
-    const filesToProcess = Array.from(files).slice(0, availableSlots);
     let addedCount = 0;
-
-    for (const file of filesToProcess) {
+    for (const file of Array.from(files)) {
+        const emptyIdx = brandGallery.findIndex(s => !s.image || s.image.trim() === "");
+        if (emptyIdx === -1) break;
         try {
             const compressed = await compressImage(file, 1200, 1200, 0.78);
-            brandGallery.push(compressed);
+            brandGallery[emptyIdx].image = compressed;
             addedCount++;
         } catch (e) {
-            console.error("Error al procesar la foto:", e);
+            console.error("Error al procesar foto:", e);
         }
     }
 
     renderBrandGallery();
     event.target.value = "";
 
-    if (files.length > availableSlots) {
-        showDashboardAlert(`Se agregaron ${addedCount} foto(s). Se omitieron las restantes porque el límite es de 6 fotos.`, "warning");
-    } else if (addedCount > 0) {
-        showDashboardAlert(`¡${addedCount} foto(s) agregada(s) a la galería!`);
+    if (addedCount === 0) {
+        showDashboardAlert("Todos los 6 capítulos ya tienen foto. Podés cambiar fotos de forma individual en cada capítulo.", "warning");
+    } else {
+        showDashboardAlert(`¡${addedCount} foto(s) asignada(s) a los capítulos disponibles!`);
     }
-}
-
-function removeBrandGalleryImage(index) {
-    brandGallery.splice(index, 1);
-    renderBrandGallery();
 }
 
 async function saveBrandProfile(event) {
     event.preventDefault();
+    const payloadGallery = brandGallery
+        .map((s, idx) => ({
+            chapter: idx + 1,
+            title: BRAND_CHAPTERS[idx].title,
+            image: s.image || "",
+            caption: s.caption || ""
+        }))
+        .filter(s => s.image && s.image.trim() !== "");
+
     const payload = {
         brand_name: document.getElementById("brand-name").value.trim(),
         description: document.getElementById("brand-desc").value.trim(),
         website: document.getElementById("brand-website").value.trim(),
         logo_url: brandLogo,
-        gallery_images: brandGallery,
+        gallery_images: payloadGallery,
         space_requested: parseFloat(document.getElementById("brand-space").value) || 1.0,
         electricity_needs: document.getElementById("brand-electricity").value,
         products: document.getElementById("brand-products").value.trim()
@@ -576,10 +748,10 @@ function renderMusicianView() {
         document.getElementById("musician-setup").value = prof.setup_description || "";
         document.getElementById("musician-rider").value = prof.technical_rider || "";
         musicianPhoto = prof.photo_url || "";
-        musicianGallery = Array.isArray(prof.gallery_images) ? [...prof.gallery_images] : [];
+        musicianGallery = parseGalleryToSlots(prof.gallery_images);
     } else {
         musicianPhoto = "";
-        musicianGallery = [];
+        musicianGallery = parseGalleryToSlots([]);
     }
 
     renderMusicianPhotoPreview();
@@ -640,81 +812,105 @@ function renderMusicianGallery() {
     const countEl = document.getElementById("musician-gallery-count");
     if (!grid) return;
 
-    if (countEl) countEl.textContent = `${musicianGallery.length} / 6 fotos`;
+    const loadedCount = musicianGallery.filter(s => s && s.image).length;
+    if (countEl) countEl.textContent = `${loadedCount} / 6 fotos`;
     grid.innerHTML = "";
 
-    musicianGallery.forEach((imgUrl, idx) => {
+    MUSICIAN_CHAPTERS.forEach((ch, idx) => {
+        const slot = musicianGallery[idx] || { image: "", caption: "" };
+        const hasImg = Boolean(slot.image && slot.image.trim() !== "");
+
         const card = document.createElement("div");
-        card.className = "relative aspect-square rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 group shadow-sm";
+        card.className = "border border-zinc-800 bg-zinc-900/80 p-4 rounded-xl space-y-3 transition hover:border-zinc-700 shadow-sm";
         card.innerHTML = `
-            <img src="${imgUrl}" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform" onclick="openLightbox('${imgUrl}', 'Foto de sintetizador / show (${idx + 1})')" alt="Foto ${idx + 1}">
-            <button type="button" onclick="removeMusicianGalleryImage(${idx})" title="Eliminar foto" class="absolute top-1.5 right-1.5 bg-black/75 hover:bg-rose-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition">
-                ✕
-            </button>
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-purple-400 px-2 py-0.5 rounded border border-zinc-700">
+                        Capítulo ${ch.num} · Foto ${ch.matrixPhoto} en Matriz
+                    </span>
+                    <h4 class="text-xs font-bold text-zinc-200">${ch.title}</h4>
+                </div>
+                <div>
+                    ${hasImg 
+                        ? '<span class="text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded flex items-center gap-1">✅ Foto lista</span>'
+                        : '<span class="text-[10px] text-zinc-500 font-medium bg-zinc-950/60 border border-zinc-800 px-2 py-0.5 rounded flex items-center gap-1">📷 Sin imagen</span>'
+                    }
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
+                <div class="sm:col-span-1 flex flex-col items-center">
+                    ${hasImg ? `
+                        <div class="relative w-full aspect-square rounded-lg overflow-hidden border border-zinc-700 bg-zinc-950 group">
+                            <img src="${slot.image}" class="w-full h-full object-cover cursor-pointer hover:scale-105 transition" onclick="openLightbox('${slot.image}', '${ch.title}')" alt="${ch.title}">
+                            <button type="button" onclick="removeMusicianChapterImage(${idx})" title="Eliminar foto" class="absolute top-1 right-1 bg-black/80 hover:bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold transition">✕</button>
+                        </div>
+                        <button type="button" onclick="triggerChapterUpload('musician', ${idx})" class="mt-2 text-[11px] text-zinc-400 hover:text-purple-400 underline transition">Cambiar foto</button>
+                    ` : `
+                        <div onclick="triggerChapterUpload('musician', ${idx})" class="w-full aspect-square rounded-lg border-2 border-dashed border-zinc-700 hover:border-purple-500 hover:bg-purple-950/20 flex flex-col items-center justify-center text-zinc-400 hover:text-purple-400 cursor-pointer transition p-2 text-center group">
+                            <span class="text-2xl group-hover:scale-110 transition-transform">📷</span>
+                            <span class="text-[11px] font-semibold mt-1">Subir foto</span>
+                        </div>
+                    `}
+                    <input type="file" id="musician-chapter-file-${idx}" accept="image/*" class="hidden" onchange="handleSingleChapterUpload('musician', ${idx}, event)">
+                </div>
+                <div class="sm:col-span-3 flex flex-col">
+                    <label class="block text-[11px] font-semibold text-zinc-400 mb-1">
+                        Ficha Frecuencia (Texto revelado al mantener presionado 3 seg)
+                    </label>
+                    <textarea id="musician-chapter-caption-${idx}" rows="3" placeholder="${ch.placeholder}" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-xs focus:outline-none focus:border-purple-500 text-zinc-200" oninput="updateChapterCaption('musician', ${idx}, this.value)">${slot.caption || ""}</textarea>
+                    <p class="text-[10px] text-zinc-500 mt-1">💡 Sugerencia: ${ch.placeholder}</p>
+                </div>
+            </div>
         `;
         grid.appendChild(card);
     });
-
-    if (musicianGallery.length < 6) {
-        const addBtn = document.createElement("div");
-        addBtn.className = "aspect-square rounded-xl border-2 border-dashed border-zinc-700 hover:border-sky-500 hover:bg-sky-950/20 flex flex-col items-center justify-center text-zinc-400 hover:text-sky-400 cursor-pointer transition p-2 text-center group";
-        addBtn.onclick = () => document.getElementById("musician-gallery-input").click();
-        addBtn.innerHTML = `
-            <span class="text-2xl group-hover:scale-110 transition-transform">➕</span>
-            <span class="text-[10px] font-bold mt-1">Agregar</span>
-        `;
-        grid.appendChild(addBtn);
-    }
 }
 
 async function handleMusicianGalleryUpload(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    const availableSlots = 6 - musicianGallery.length;
-    if (availableSlots <= 0) {
-        showDashboardAlert("Has alcanzado el límite de 6 fotos en la galería", "error");
-        event.target.value = "";
-        return;
-    }
-
-    const filesToProcess = Array.from(files).slice(0, availableSlots);
     let addedCount = 0;
-
-    for (const file of filesToProcess) {
+    for (const file of Array.from(files)) {
+        const emptyIdx = musicianGallery.findIndex(s => !s.image || s.image.trim() === "");
+        if (emptyIdx === -1) break;
         try {
             const compressed = await compressImage(file, 1200, 1200, 0.78);
-            musicianGallery.push(compressed);
+            musicianGallery[emptyIdx].image = compressed;
             addedCount++;
         } catch (e) {
-            console.error("Error al procesar la foto:", e);
+            console.error("Error al procesar foto:", e);
         }
     }
 
     renderMusicianGallery();
     event.target.value = "";
 
-    if (files.length > availableSlots) {
-        showDashboardAlert(`Se agregaron ${addedCount} foto(s). Se omitieron las restantes porque el límite es de 6 fotos.`, "warning");
-    } else if (addedCount > 0) {
-        showDashboardAlert(`¡${addedCount} foto(s) agregada(s) a la galería!`);
+    if (addedCount === 0) {
+        showDashboardAlert("Todos los 6 capítulos ya tienen foto. Podés cambiar fotos de forma individual en cada capítulo.", "warning");
+    } else {
+        showDashboardAlert(`¡${addedCount} foto(s) asignada(s) a los capítulos de la galería!`);
     }
-}
-
-function removeMusicianGalleryImage(index) {
-    musicianGallery.splice(index, 1);
-    renderMusicianGallery();
 }
 
 async function saveMusicianProfile(event) {
     event.preventDefault();
+    const payloadGallery = musicianGallery
+        .map((s, idx) => ({
+            chapter: idx + 1,
+            title: MUSICIAN_CHAPTERS[idx].title,
+            image: s.image || "",
+            caption: s.caption || ""
+        }))
+        .filter(s => s.image && s.image.trim() !== "");
+
     const payload = {
         artist_name: document.getElementById("musician-name").value.trim(),
         genre: document.getElementById("musician-genre").value.trim(),
         bio: document.getElementById("musician-bio").value.trim(),
         links: document.getElementById("musician-links").value.trim(),
         photo_url: musicianPhoto,
-        gallery_images: musicianGallery,
+        gallery_images: payloadGallery,
         setup_description: document.getElementById("musician-setup").value.trim(),
         technical_rider: document.getElementById("musician-rider").value.trim()
     };
@@ -929,7 +1125,11 @@ async function renderAdminView() {
                                 <div class="flex items-center gap-1.5 flex-wrap">
                         `;
                         item.details.gallery_images.forEach((img, gIdx) => {
-                            gHtml += `<img src="${img}" onclick="openLightbox('${img}', '${item.details.name || 'Marca'} - Foto ${gIdx+1}')" class="w-8 h-8 rounded-lg object-cover border border-zinc-700 hover:border-sky-400 cursor-pointer transition transform hover:scale-110 shadow-sm" title="Ver imagen">`;
+                            const imgSrc = (typeof img === "object" && img) ? (img.image || "") : img;
+                            const imgCap = (typeof img === "object" && img && img.caption) ? img.caption : (item.details.name || `Foto ${gIdx+1}`);
+                            if (imgSrc) {
+                                gHtml += `<img src="${imgSrc}" onclick="openLightbox('${imgSrc}', '${imgCap.replace(/'/g, "\\'")}')" class="w-8 h-8 rounded-lg object-cover border border-zinc-700 hover:border-sky-400 cursor-pointer transition transform hover:scale-110 shadow-sm" title="Ver imagen">`;
+                            }
                         });
                         gHtml += `</div></div>`;
                         detailHtml += gHtml;
@@ -961,7 +1161,11 @@ async function renderAdminView() {
                                 <div class="flex items-center gap-1.5 flex-wrap">
                         `;
                         item.details.gallery_images.forEach((img, gIdx) => {
-                            gHtml += `<img src="${img}" onclick="openLightbox('${img}', '${item.details.name || 'Músico'} - Setup ${gIdx+1}')" class="w-8 h-8 rounded-lg object-cover border border-zinc-700 hover:border-purple-400 cursor-pointer transition transform hover:scale-110 shadow-sm" title="Ver imagen">`;
+                            const imgSrc = (typeof img === "object" && img) ? (img.image || "") : img;
+                            const imgCap = (typeof img === "object" && img && img.caption) ? img.caption : (item.details.name || `Setup ${gIdx+1}`);
+                            if (imgSrc) {
+                                gHtml += `<img src="${imgSrc}" onclick="openLightbox('${imgSrc}', '${imgCap.replace(/'/g, "\\'")}')" class="w-8 h-8 rounded-lg object-cover border border-zinc-700 hover:border-purple-400 cursor-pointer transition transform hover:scale-110 shadow-sm" title="Ver imagen">`;
+                            }
                         });
                         gHtml += `</div></div>`;
                         detailHtml += gHtml;
