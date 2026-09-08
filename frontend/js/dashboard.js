@@ -232,6 +232,8 @@ function showDashboardAlert(message, type = "success") {
     
     if (type === "success") {
         alertBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-emerald-950/40 text-emerald-400 border-emerald-800 shadow-sm";
+    } else if (type === "warning") {
+        alertBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-amber-950/40 text-amber-400 border-amber-800 shadow-sm";
     } else {
         alertBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-rose-950/40 text-rose-400 border-rose-800 shadow-sm";
     }
@@ -462,22 +464,36 @@ function renderBrandGallery() {
 }
 
 async function handleBrandGalleryUpload(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    if (brandGallery.length >= 6) {
+    const availableSlots = 6 - brandGallery.length;
+    if (availableSlots <= 0) {
         showDashboardAlert("Has alcanzado el límite de 6 fotos en la galería", "error");
+        event.target.value = "";
         return;
     }
 
-    try {
-        const compressed = await compressImage(file, 1200, 1200, 0.78);
-        brandGallery.push(compressed);
-        renderBrandGallery();
-    } catch (e) {
-        showDashboardAlert("Error al procesar la foto", "error");
-    } finally {
-        event.target.value = "";
+    const filesToProcess = Array.from(files).slice(0, availableSlots);
+    let addedCount = 0;
+
+    for (const file of filesToProcess) {
+        try {
+            const compressed = await compressImage(file, 1200, 1200, 0.78);
+            brandGallery.push(compressed);
+            addedCount++;
+        } catch (e) {
+            console.error("Error al procesar la foto:", e);
+        }
+    }
+
+    renderBrandGallery();
+    event.target.value = "";
+
+    if (files.length > availableSlots) {
+        showDashboardAlert(`Se agregaron ${addedCount} foto(s). Se omitieron las restantes porque el límite es de 6 fotos.`, "warning");
+    } else if (addedCount > 0) {
+        showDashboardAlert(`¡${addedCount} foto(s) agregada(s) a la galería!`);
     }
 }
 
@@ -621,22 +637,36 @@ function renderMusicianGallery() {
 }
 
 async function handleMusicianGalleryUpload(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    if (musicianGallery.length >= 6) {
+    const availableSlots = 6 - musicianGallery.length;
+    if (availableSlots <= 0) {
         showDashboardAlert("Has alcanzado el límite de 6 fotos en la galería", "error");
+        event.target.value = "";
         return;
     }
 
-    try {
-        const compressed = await compressImage(file, 1200, 1200, 0.78);
-        musicianGallery.push(compressed);
-        renderMusicianGallery();
-    } catch (e) {
-        showDashboardAlert("Error al procesar la foto", "error");
-    } finally {
-        event.target.value = "";
+    const filesToProcess = Array.from(files).slice(0, availableSlots);
+    let addedCount = 0;
+
+    for (const file of filesToProcess) {
+        try {
+            const compressed = await compressImage(file, 1200, 1200, 0.78);
+            musicianGallery.push(compressed);
+            addedCount++;
+        } catch (e) {
+            console.error("Error al procesar la foto:", e);
+        }
+    }
+
+    renderMusicianGallery();
+    event.target.value = "";
+
+    if (files.length > availableSlots) {
+        showDashboardAlert(`Se agregaron ${addedCount} foto(s). Se omitieron las restantes porque el límite es de 6 fotos.`, "warning");
+    } else if (addedCount > 0) {
+        showDashboardAlert(`¡${addedCount} foto(s) agregada(s) a la galería!`);
     }
 }
 
