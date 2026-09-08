@@ -10,7 +10,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from backend.database import engine, get_db, Base
-from backend.models import User, BrandProfile, MusicianProfile, Donation
+from backend.models import User, BrandProfile, MusicianProfile, CollaboratorProfile, Donation
 from backend.auth import (
     create_access_token, 
     verify_google_token, 
@@ -64,6 +64,13 @@ class MusicianProfileRequest(BaseModel):
     links: Optional[str] = ""
     setup_description: Optional[str] = ""
     technical_rider: Optional[str] = ""
+
+class CollaboratorProfileRequest(BaseModel):
+    areas_of_interest: str
+    phone: Optional[str] = ""
+    availability: Optional[str] = ""
+    experience: Optional[str] = ""
+    notes: Optional[str] = ""
 
 class DonationRequest(BaseModel):
     amount: float
@@ -232,9 +239,22 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
             "technical_rider": current_user.musician_profile.technical_rider,
         }
         
-    profile = brand_data if current_user.role == "brand" else musician_data
+    profile = brand_data if current_user.role == "brand" else (musician_data if current_user.role == "musician" else None)
+    
+    collaborator_data = None
+    if current_user.collaborator_profile:
+        collaborator_data = {
+            "areas_of_interest": current_user.collaborator_profile.areas_of_interest,
+            "phone": current_user.collaborator_profile.phone,
+            "availability": current_user.collaborator_profile.availability,
+            "experience": current_user.collaborator_profile.experience,
+            "notes": current_user.collaborator_profile.notes,
+        }
+    if current_user.role == "collaborator":
+        profile = collaborator_data
+
     if is_admin and not profile:
-        profile = musician_data or brand_data
+        profile = musician_data or brand_data or collaborator_data
         
     return {
         "email": current_user.email,
@@ -244,7 +264,8 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
         "is_approved": current_user.is_approved,
         "profile": profile,
         "brand_profile": brand_data,
-        "musician_profile": musician_data
+        "musician_profile": musician_data,
+        "collaborator_profile": collaborator_data
     }
 
 @app.post("/api/auth/select-role")
@@ -260,7 +281,7 @@ def select_role(role_req: SelectRoleRequest, response: Response, current_user: U
         )
         
     requested_role = role_req.role.lower()
-    if requested_role not in ["brand", "musician", "donor"]:
+    if requested_role not in ["brand", "musician", "donor", "collaborator"]:
         raise HTTPException(status_code=400, detail="Rol inválido")
         
     current_user.role = requested_role
@@ -322,12 +343,31 @@ def save_musician_profile(profile_req: MusicianProfileRequest, current_user: Use
     db.commit()
     return {"message": "Perfil de músico guardado correctamente. Pendiente de aprobación por administración."}
 
+@app.post("/api/profile/collaborator")
+@app.post("/profile/collaborator")
+def save_collaborator_profile(profile_req: CollaboratorProfileRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    check_role(current_user, ["collaborator"])
+    
+    profile = current_user.collaborator_profile
+    if not profile:
+        profile = CollaboratorProfile(id=current_user.id)
+        db.add(profile)
+        
+    profile.areas_of_interest = profile_req.areas_of_interest
+    profile.phone = profile_req.phone
+    profile.availability = profile_req.availability
+    profile.experience = profile_req.experience
+    profile.notes = profile_req.notes
+    
+    db.commit()
+    return {"message": "¡Perfil de colaborador guardado con éxito! Muchas gracias por sumarte al equipo de Synth Argentina."}
+
 # --- Donations Routes ---
 
 @app.post("/api/donations/create")
 @app.post("/donations/create")
 def create_donation(don_req: DonationRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    check_role(current_user, ["donor", "admin", "brand", "musician"])
+    check_role(current_user, ["donor", "admin", "brand", "musician", "collaborator"])
     
     donation = Donation(
         user_id=current_user.id,
@@ -362,6 +402,7 @@ def get_admin_stats(current_user: User = Depends(get_current_user), db: Session 
     total_users = db.query(User).count()
     total_brands = db.query(BrandProfile).count()
     total_musicians = db.query(MusicianProfile).count()
+    total_collaborators = db.query(CollaboratorProfile).count()
     
     total_space = db.query(func.sum(BrandProfile.space_requested)).scalar() or 0.0
     total_donations = db.query(func.sum(Donation.amount)).filter(Donation.status == "completed").scalar() or 0.0
@@ -370,6 +411,7 @@ def get_admin_stats(current_user: User = Depends(get_current_user), db: Session 
         "total_users": total_users,
         "total_brands": total_brands,
         "total_musicians": total_musicians,
+        "total_collaborators": total_collaborators,
         "total_space_requested_m2": total_space,
         "total_donated_ars": total_donations
     }
@@ -379,7 +421,7 @@ def get_admin_stats(current_user: User = Depends(get_current_user), db: Session 
 def get_registrations(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     check_role(current_user, ["admin"])
     
-    users = db.query(User).filter(User.role.in_(["brand", "musician"])).all()
+    users = db.query(User).filter(User.role.in_(["brand", "musician", "collaborator"])).all()
     
     results = []
     for u in users:
@@ -400,6 +442,15 @@ def get_registrations(current_user: User = Depends(get_current_user), db: Sessio
                 "bio": u.musician_profile.bio,
                 "links": u.musician_profile.links,
                 "setup_description": u.musician_profile.setup_description
+            }
+        elif u.role == "collaborator" and u.collaborator_profile:
+            detail = {
+                "name": u.full_name or "Colaborador",
+                "areas_of_interest": u.collaborator_profile.areas_of_interest,
+                "phone": u.collaborator_profile.phone,
+                "availability": u.collaborator_profile.availability,
+                "experience": u.collaborator_profile.experience,
+                "notes": u.collaborator_profile.notes
             }
         else:
             continue

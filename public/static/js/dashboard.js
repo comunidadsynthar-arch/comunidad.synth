@@ -19,6 +19,7 @@ async function fetchUserData() {
         if (response.ok) {
             currentUser = await response.json();
             updateNavbar();
+            updateWelcomeBanner();
             renderRoleView();
         } else {
             console.error("Error al obtener perfil.");
@@ -37,6 +38,7 @@ function updateNavbar() {
         "admin": "Administrador",
         "brand": "Expositor / Marca",
         "musician": "Músico / Artista",
+        "collaborator": "Colaborador / Staff",
         "donor": "Donante"
     };
     
@@ -51,11 +53,46 @@ function updateNavbar() {
     }
 }
 
+// Update personalized welcome banner
+function updateWelcomeBanner() {
+    const welcomeBox = document.getElementById("user-welcome-box");
+    if (!welcomeBox) return;
+
+    welcomeBox.classList.remove("hidden");
+    const nameEl = document.getElementById("welcome-user-name");
+    const statusEl = document.getElementById("welcome-user-status");
+    const roleTagEl = document.getElementById("welcome-role-tag");
+
+    const displayName = currentUser.name || currentUser.email.split("@")[0];
+    nameEl.textContent = displayName;
+
+    const roleMap = {
+        "pending": "Elegí tu rol",
+        "admin": "👑 Administrador",
+        "brand": "🔌 Marca / Expositor",
+        "musician": "🎙️ Músico / Artista",
+        "collaborator": "🤝 Colaborador / Staff",
+        "donor": "💙 Donador / Público"
+    };
+
+    roleTagEl.textContent = roleMap[currentUser.role] || currentUser.role;
+
+    if (currentUser.is_admin || currentUser.role === "admin") {
+        statusEl.textContent = "Tenés permisos totales para administrar admisiones y consultar todos los perfiles de la comunidad.";
+    } else if (currentUser.role === "pending") {
+        statusEl.textContent = "Tu cuenta está vinculada. Por favor seleccioná tu rol abajo para participar en el evento.";
+    } else {
+        statusEl.textContent = "Tus datos están guardados en el sistema. Podés revisarlos o actualizarlos en cualquier momento.";
+    }
+}
+
 // Hide all dashboard panels
 function hideAllViews() {
     document.getElementById("view-pending").classList.add("hidden");
     document.getElementById("view-brand").classList.add("hidden");
     document.getElementById("view-musician").classList.add("hidden");
+    const collabView = document.getElementById("view-collaborator");
+    if (collabView) collabView.classList.add("hidden");
     document.getElementById("view-donor").classList.add("hidden");
     document.getElementById("view-admin").classList.add("hidden");
 }
@@ -67,9 +104,9 @@ function showDashboardAlert(message, type = "success") {
     alertBox.classList.remove("hidden");
     
     if (type === "success") {
-        alertBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-emerald-950/40 text-emerald-400 border-emerald-800";
+        alertBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-emerald-950/40 text-emerald-400 border-emerald-800 shadow-sm";
     } else {
-        alertBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-rose-950/40 text-rose-400 border-rose-800";
+        alertBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-rose-950/40 text-rose-400 border-rose-800 shadow-sm";
     }
     
     setTimeout(() => {
@@ -81,7 +118,7 @@ function showDashboardAlert(message, type = "success") {
 function switchAdminTab(tabName) {
     hideAllViews();
     
-    const tabs = ['admin', 'musician', 'brand', 'donor'];
+    const tabs = ['admin', 'musician', 'brand', 'collaborator', 'donor'];
     tabs.forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
         if (btn) {
@@ -103,6 +140,10 @@ function switchAdminTab(tabName) {
     } else if (tabName === 'brand') {
         document.getElementById("view-brand").classList.remove("hidden");
         renderBrandView();
+    } else if (tabName === 'collaborator') {
+        const collabView = document.getElementById("view-collaborator");
+        if (collabView) collabView.classList.remove("hidden");
+        renderCollaboratorView();
     } else if (tabName === 'donor') {
         document.getElementById("view-donor").classList.remove("hidden");
         renderDonorView();
@@ -138,6 +179,12 @@ function renderRoleView() {
         case "musician":
             document.getElementById("view-musician").classList.remove("hidden");
             renderMusicianView();
+            break;
+            
+        case "collaborator":
+            const collabView = document.getElementById("view-collaborator");
+            if (collabView) collabView.classList.remove("hidden");
+            renderCollaboratorView();
             break;
             
         case "donor":
@@ -187,28 +234,26 @@ async function selectRole(role) {
 
 // --- Brand Profile handlers ---
 function renderBrandView() {
-    // Populate form if profile details exist
     const prof = currentUser.brand_profile || currentUser.profile;
     if (prof) {
         document.getElementById("brand-name").value = prof.brand_name || "";
         document.getElementById("brand-desc").value = prof.description || "";
         document.getElementById("brand-website").value = prof.website || "";
         document.getElementById("brand-space").value = prof.space_requested || 1.0;
-        document.getElementById("brand-electricity").value = prof.electricity_needs || "";
+        document.getElementById("brand-electricity").value = prof.electricity_needs || "220V - Simple";
         document.getElementById("brand-products").value = prof.products || "";
     }
     
-    // Status Alert
     const statusBox = document.getElementById("brand-approval-status");
     if (currentUser.is_admin || currentUser.role === "admin") {
         statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-sky-950/40 text-sky-400 border-sky-800";
         statusBox.textContent = "👑 Modo Administrador: Podés ver o configurar los datos de stand y marca expositora.";
     } else if (currentUser.is_approved) {
         statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-emerald-950/40 text-emerald-400 border-emerald-800";
-        statusBox.textContent = "⚡ ¡Tu perfil de marca está APROBADO por administración! Formas parte oficial de los expositores de Synth Argentina.";
+        statusBox.textContent = "⚡ ¡Tu perfil de marca está APROBADO por administración! Formás parte oficial de los expositores de Synth Argentina.";
     } else {
         statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-amber-950/40 text-amber-400 border-amber-800";
-        statusBox.textContent = "⏳ Tu perfil está guardado, pero está PENDIENTE de aprobación por parte de la administración. Se habilitará pronto.";
+        statusBox.textContent = "⏳ Tu perfil está guardado y está PENDIENTE de confirmación por administración. Te contactaremos a la brevedad.";
     }
 }
 
@@ -232,7 +277,7 @@ async function saveBrandProfile(event) {
         
         if (response.ok) {
             showDashboardAlert("¡Perfil de marca guardado con éxito!");
-            fetchUserData(); // Refresh local state
+            fetchUserData();
         } else {
             const err = await response.json();
             showDashboardAlert(err.detail || "Error guardando el perfil", "error");
@@ -297,9 +342,76 @@ async function saveMusicianProfile(event) {
     }
 }
 
+// --- Collaborator Profile handlers (NUEVO) ---
+function renderCollaboratorView() {
+    const prof = currentUser.collaborator_profile || currentUser.profile;
+    if (prof) {
+        document.getElementById("collaborator-phone").value = prof.phone || "";
+        document.getElementById("collaborator-availability").value = prof.availability || "";
+        document.getElementById("collaborator-experience").value = prof.experience || "";
+        document.getElementById("collaborator-notes").value = prof.notes || "";
+
+        // Check checkboxes
+        const selectedAreas = (prof.areas_of_interest || "").split(",").map(a => a.trim());
+        const checkboxes = document.querySelectorAll('input[name="collab-area"]');
+        checkboxes.forEach(cb => {
+            cb.checked = selectedAreas.includes(cb.value);
+        });
+    }
+
+    const statusBox = document.getElementById("collaborator-approval-status");
+    if (statusBox) {
+        if (currentUser.is_admin || currentUser.role === "admin") {
+            statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-sky-950/40 text-sky-400 border-sky-800";
+            statusBox.textContent = "👑 Modo Administrador: Podés ver o configurar la postulación de colaboración.";
+        } else if (currentUser.is_approved) {
+            statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-emerald-950/40 text-emerald-400 border-emerald-800";
+            statusBox.textContent = "🤝 ¡Tu colaboración en el equipo de Synth Argentina está CONFIRMADA! Nos estaremos comunicando por WhatsApp.";
+        } else {
+            statusBox.className = "mb-6 p-4 rounded-xl border text-sm text-center bg-amber-950/40 text-amber-400 border-amber-800";
+            statusBox.textContent = "⏳ Tus datos de colaboración están guardados. La coordinación de producción se pondrá en contacto pronto.";
+        }
+    }
+}
+
+async function saveCollaboratorProfile(event) {
+    event.preventDefault();
+
+    const checkedBoxes = Array.from(document.querySelectorAll('input[name="collab-area"]:checked')).map(cb => cb.value);
+    if (checkedBoxes.length === 0) {
+        showDashboardAlert("Por favor seleccioná al menos un área en la que te gustaría colaborar.", "error");
+        return;
+    }
+
+    const payload = {
+        areas_of_interest: checkedBoxes.join(", "),
+        phone: document.getElementById("collaborator-phone").value.trim(),
+        availability: document.getElementById("collaborator-availability").value.trim(),
+        experience: document.getElementById("collaborator-experience").value.trim(),
+        notes: document.getElementById("collaborator-notes").value.trim()
+    };
+
+    try {
+        const response = await fetch("/profile/collaborator", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            showDashboardAlert("¡Perfil de colaborador guardado con éxito! Muchas gracias por sumarte al equipo.");
+            fetchUserData();
+        } else {
+            const err = await response.json();
+            showDashboardAlert(err.detail || "Error guardando el perfil", "error");
+        }
+    } catch (err) {
+        showDashboardAlert("Error de conexión con el servidor", "error");
+    }
+}
+
 // --- Donor/Donation Handlers ---
 async function renderDonorView() {
-    // Fetch my donations
     try {
         const response = await fetch("/donations/my");
         if (response.ok) {
@@ -329,16 +441,24 @@ async function renderDonorView() {
     }
 }
 
-async function donateAmount(amount) {
+async function handleDonation(event) {
+    event.preventDefault();
+    const input = document.getElementById("donation-amount");
+    const amount = parseFloat(input.value);
+    if (!amount || amount < 500) {
+        showDashboardAlert("Por favor ingresa un monto válido (Mínimo $500 ARS)", "error");
+        return;
+    }
+
     try {
         const response = await fetch("/donations/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ amount: parseFloat(amount) })
+            body: JSON.stringify({ amount })
         });
         
         if (response.ok) {
-            showDashboardAlert("¡Donación registrada! ¡Muchas gracias por tu apoyo! 💙");
+            showDashboardAlert("¡Aporte registrado! ¡Muchas gracias por apoyar a la comunidad! 💙");
             renderDonorView();
         } else {
             showDashboardAlert("No se pudo registrar la donación.", "error");
@@ -348,17 +468,6 @@ async function donateAmount(amount) {
     }
 }
 
-function donateCustom() {
-    const input = document.getElementById("custom-donation");
-    const amount = parseFloat(input.value);
-    if (!amount || amount < 1000) {
-        showDashboardAlert("Por favor ingresa un monto válido (Mínimo $1.000 ARS)", "error");
-        return;
-    }
-    donateAmount(amount);
-    input.value = "";
-}
-
 // --- Admin Handlers ---
 async function renderAdminView() {
     // 1. Fetch Stats
@@ -366,10 +475,12 @@ async function renderAdminView() {
         const response = await fetch("/admin/stats");
         if (response.ok) {
             const stats = await response.json();
-            document.getElementById("stat-brands").textContent = stats.total_brands;
-            document.getElementById("stat-musicians").textContent = stats.total_musicians;
-            document.getElementById("stat-space").textContent = `${stats.total_space_requested_m2} m²`;
-            document.getElementById("stat-funds").textContent = `$${stats.total_donated_ars.toLocaleString('es-AR')} ARS`;
+            document.getElementById("stat-brands").textContent = stats.total_brands || 0;
+            document.getElementById("stat-musicians").textContent = stats.total_musicians || 0;
+            const collabStat = document.getElementById("stat-collaborators");
+            if (collabStat) collabStat.textContent = stats.total_collaborators || 0;
+            document.getElementById("stat-space").textContent = `${stats.total_space_requested_m2 || 0} m²`;
+            document.getElementById("stat-funds").textContent = `$${(stats.total_donated_ars || 0).toLocaleString('es-AR')} ARS`;
         }
     } catch (err) {
         console.error("Error al cargar estadísticas:", err);
@@ -384,7 +495,7 @@ async function renderAdminView() {
             tbody.innerHTML = "";
             
             if (items.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-zinc-500">No hay marcas ni músicos registrados aún.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-zinc-500">No hay convocatorias registradas aún.</td></tr>`;
                 return;
             }
             
@@ -393,21 +504,34 @@ async function renderAdminView() {
                 
                 // Formatear detalles según rol
                 let detailHtml = "";
+                let roleTag = "";
+
                 if (item.role === "brand") {
+                    roleTag = `<span class="inline-block px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider bg-sky-950 text-sky-400 border border-sky-900">Marca</span>`;
                     detailHtml = `
                         <div class="text-xs">
-                            <span class="block text-zinc-400">Sitio: <a href="${item.details.website}" target="_blank" class="text-sky-400 hover:underline">${item.details.website || 'N/A'}</a></span>
                             <span class="block text-zinc-400">Espacio: <strong class="text-zinc-200">${item.details.space_requested} m²</strong></span>
                             <span class="block text-zinc-400">Electricidad: <strong class="text-zinc-200">${item.details.electricity_needs}</strong></span>
                             <span class="block text-zinc-400">Productos: ${item.details.products || 'N/A'}</span>
                         </div>
                     `;
                 } else if (item.role === "musician") {
+                    roleTag = `<span class="inline-block px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider bg-purple-950 text-purple-400 border border-purple-900">Músico</span>`;
                     detailHtml = `
                         <div class="text-xs">
                             <span class="block text-zinc-400">Género: <strong class="text-zinc-200">${item.details.genre}</strong></span>
                             <span class="block text-zinc-400">Links: ${item.details.links || 'N/A'}</span>
                             <span class="block text-zinc-400">Equipos: ${item.details.setup_description || 'N/A'}</span>
+                        </div>
+                    `;
+                } else if (item.role === "collaborator") {
+                    roleTag = `<span class="inline-block px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider bg-emerald-950 text-emerald-400 border border-emerald-900">Colaborador</span>`;
+                    detailHtml = `
+                        <div class="text-xs">
+                            <span class="block text-zinc-400">Áreas: <strong class="text-emerald-400">${item.details.areas_of_interest || 'N/A'}</strong></span>
+                            <span class="block text-zinc-400">WhatsApp: <strong class="text-zinc-200">${item.details.phone || 'N/A'}</strong></span>
+                            <span class="block text-zinc-400">Disponibilidad: ${item.details.availability || 'N/A'}</span>
+                            <span class="block text-zinc-400">Experiencia: ${item.details.experience || 'N/A'}</span>
                         </div>
                     `;
                 }
@@ -424,11 +548,9 @@ async function renderAdminView() {
 
                 row.innerHTML = `
                     <td class="py-4">
-                        <span class="block font-bold text-zinc-200">${item.details.name || 'Sin nombre cargado'}</span>
-                        <span class="inline-block px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider ${
-                            item.role === 'brand' ? 'bg-sky-950 text-sky-400 border border-sky-900' : 'bg-purple-950 text-purple-400 border border-purple-900'
-                        }">${item.role === 'brand' ? 'Marca' : 'Músico'}</span>
+                        <span class="block font-bold text-zinc-200">${item.details.name || 'Sin nombre'}</span>
                     </td>
+                    <td class="py-4">${roleTag}</td>
                     <td class="py-4">
                         <span class="block text-sm text-zinc-300">${item.full_name || 'N/A'}</span>
                         <span class="block text-xs text-zinc-500">${item.email}</span>
@@ -449,7 +571,7 @@ async function approveUser(userId) {
     try {
         const response = await fetch(`/admin/approve/${userId}`, { method: "POST" });
         if (response.ok) {
-            showDashboardAlert("Usuario aprobado con éxito.");
+            showDashboardAlert("Participante aprobado con éxito.");
             renderAdminView();
         }
     } catch (err) {
@@ -461,7 +583,7 @@ async function rejectUser(userId) {
     try {
         const response = await fetch(`/admin/reject/${userId}`, { method: "POST" });
         if (response.ok) {
-            showDashboardAlert("Aprobación revocada correctamente.");
+            showDashboardAlert("Estado actualizado correctamente.");
             renderAdminView();
         }
     } catch (err) {

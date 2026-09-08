@@ -10,13 +10,14 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=True)
     google_id = Column(String, unique=True, index=True, nullable=True)
-    role = Column(String, default="pending")  # admin, brand, musician, donor, pending
-    is_approved = Column(Boolean, default=False)  # Admin approves brands/musicians
+    role = Column(String, default="pending")  # admin, brand, musician, collaborator, donor, pending
+    is_approved = Column(Boolean, default=False)  # Admin approves brands/musicians/collaborators
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     # Relationships
     brand_profile = relationship("BrandProfile", uselist=False, back_populates="user", cascade="all, delete-orphan")
     musician_profile = relationship("MusicianProfile", uselist=False, back_populates="user", cascade="all, delete-orphan")
+    collaborator_profile = relationship("CollaboratorProfile", uselist=False, back_populates="user", cascade="all, delete-orphan")
     donations = relationship("Donation", back_populates="user")
 
 class BrandProfile(Base):
@@ -44,6 +45,18 @@ class MusicianProfile(Base):
     technical_rider = Column(String, nullable=True)
 
     user = relationship("User", back_populates="musician_profile")
+
+class CollaboratorProfile(Base):
+    __tablename__ = "collaborator_profiles"
+
+    id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    areas_of_interest = Column(String, nullable=False)  # e.g., "Producción, Sonido, Fotografía"
+    phone = Column(String, nullable=True)
+    availability = Column(String, nullable=True)  # e.g., "Previas y día del evento"
+    experience = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+
+    user = relationship("User", back_populates="collaborator_profile")
 
 class Donation(Base):
     __tablename__ = "donations"
