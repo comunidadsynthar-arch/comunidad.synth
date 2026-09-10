@@ -18,6 +18,11 @@
                 </a>
             </div>
             <div class="flex items-center space-x-3 sm:space-x-4">
+                <a href="/encuesta" target="_blank" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition bg-gradient-to-r from-amber-950 to-orange-950 hover:from-amber-900 hover:to-orange-900 border border-amber-600/50 text-amber-200 shadow-md">
+                    <span>📋</span>
+                    <span class="hidden sm:inline">Responder</span>
+                    <span>Encuesta</span>
+                </a>
                 <a href="/matriz" target="_blank" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition bg-gradient-to-r from-purple-900 to-indigo-900 hover:from-purple-800 hover:to-indigo-800 border border-purple-500/50 text-purple-200 shadow-md">
                     <span>🎛️</span>
                     <span class="hidden sm:inline">Ver</span>
@@ -493,7 +498,7 @@
         <section id="view-admin" class="hidden space-y-8">
             
             <!-- Dashboard Stats -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
                 <!-- Stat 1 -->
                 <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl">
                     <span class="text-zinc-500 text-[11px] font-bold uppercase tracking-wider">Marcas Registradas</span>
@@ -519,6 +524,11 @@
                     <span class="text-zinc-500 text-[11px] font-bold uppercase tracking-wider">Fondo Recaudado</span>
                     <span id="stat-funds" class="block text-2xl font-extrabold text-sky-400 mt-2">$0 ARS</span>
                 </div>
+                <!-- Stat 6 (Encuesta) -->
+                <div class="bg-zinc-900 border border-amber-500/30 p-5 rounded-xl bg-gradient-to-b from-amber-950/20 to-zinc-900">
+                    <span class="text-amber-400/80 text-[11px] font-bold uppercase tracking-wider">Respuestas Encuesta</span>
+                    <span id="stat-surveys" class="block text-2xl font-extrabold text-amber-400 mt-2">0</span>
+                </div>
             </div>
 
             <!-- List of Registrations and Approvals -->
@@ -543,9 +553,83 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Respuestas Encuesta de Organización -->
+            <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">📋</span>
+                            <h2 class="text-xl font-bold text-zinc-100">Encuesta Comunitaria de Organización</h2>
+                        </div>
+                        <p class="text-xs text-zinc-400 mt-1">Consolidado de respuestas a los 6 puntos estratégicos para la primera edición.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <a href="/encuesta" target="_blank" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-950/60 hover:bg-amber-900/60 border border-amber-500/50 text-amber-300 transition flex items-center gap-1.5 shadow-sm">
+                            <span>🔗</span> Abrir Formulario Público
+                        </a>
+                        <button type="button" onclick="loadAdminSurveyResults()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 transition flex items-center gap-1.5 shadow-sm">
+                            <span>🔄</span> Actualizar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resumen Rápido / Metricas Clave -->
+                <div id="survey-summary-cards" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 hidden">
+                    <div class="bg-zinc-950/60 border border-zinc-800 p-4 rounded-xl">
+                        <span class="text-[11px] uppercase font-bold text-amber-400 block mb-1">🏛️ Comisión Más Solicitada (1ª Opción)</span>
+                        <span id="survey-top-committee" class="text-sm font-semibold text-zinc-200">-</span>
+                    </div>
+                    <div class="bg-zinc-950/60 border border-zinc-800 p-4 rounded-xl">
+                        <span class="text-[11px] uppercase font-bold text-amber-400 block mb-1">⏱️ Duración Más Votada</span>
+                        <span id="survey-top-duration" class="text-sm font-semibold text-zinc-200">-</span>
+                    </div>
+                    <div class="bg-zinc-950/60 border border-zinc-800 p-4 rounded-xl">
+                        <span class="text-[11px] uppercase font-bold text-amber-400 block mb-1">🎟️ Modelo de Acceso Preferido</span>
+                        <span id="survey-top-access" class="text-sm font-semibold text-zinc-200">-</span>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-zinc-300">
+                        <thead class="text-zinc-400 border-b border-zinc-800">
+                            <tr>
+                                <th class="pb-3">Participante</th>
+                                <th class="pb-3">Rol / Vínculo</th>
+                                <th class="pb-3">Comisiones Preferidas</th>
+                                <th class="pb-3">Top Tareas Urgentes</th>
+                                <th class="pb-3">Fecha</th>
+                                <th class="pb-3 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="survey-responses-tbody" class="divide-y divide-zinc-800">
+                            <tr><td colspan="6" class="py-4 text-center text-zinc-500">Cargando respuestas de encuesta...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
     </main>
+
+    <!-- Modal para ver Detalle de Respuesta de Encuesta -->
+    <div id="survey-detail-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-zinc-800 max-w-3xl w-full rounded-2xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+            <div class="p-6 border-b border-zinc-800 flex items-center justify-between sticky top-0 bg-zinc-900/95 backdrop-blur-md z-10">
+                <div>
+                    <h3 id="survey-modal-title" class="text-lg font-bold text-amber-400">Detalle de Respuesta</h3>
+                    <p id="survey-modal-subtitle" class="text-xs text-zinc-400 mt-0.5"></p>
+                </div>
+                <button type="button" onclick="closeSurveyDetailModal()" class="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white transition font-bold">✕</button>
+            </div>
+            <div id="survey-modal-body" class="p-6 space-y-6 text-sm">
+                <!-- Inyectado con JS -->
+            </div>
+            <div class="p-4 border-t border-zinc-800 text-right bg-zinc-900/95">
+                <button type="button" onclick="closeSurveyDetailModal()" class="px-5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition">Cerrar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="border-t border-zinc-800 bg-zinc-900 py-6 text-center text-zinc-500 text-xs">

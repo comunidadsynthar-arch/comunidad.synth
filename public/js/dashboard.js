@@ -1073,6 +1073,8 @@ async function renderAdminView() {
             if (collabStat) collabStat.textContent = stats.total_collaborators || 0;
             document.getElementById("stat-space").textContent = `${stats.total_space_requested_m2 || 0} m²`;
             document.getElementById("stat-funds").textContent = `$${(stats.total_donated_ars || 0).toLocaleString('es-AR')} ARS`;
+            const surveyStat = document.getElementById("stat-surveys");
+            if (surveyStat) surveyStat.textContent = stats.total_surveys || 0;
         }
     } catch (err) {
         console.error("Error al cargar estadísticas:", err);
@@ -1225,6 +1227,9 @@ async function renderAdminView() {
     } catch (err) {
         console.error("Error al cargar registros administrativos:", err);
     }
+
+    // 3. Cargar Respuestas de Encuesta Comunitaria
+    await loadAdminSurveyResults();
 }
 
 async function approveUser(userId) {
@@ -1249,4 +1254,243 @@ async function rejectUser(userId) {
     } catch (err) {
         console.error("Error de red:", err);
     }
+}
+
+// --- Survey Results Admin Handlers ---
+window.adminSurveyResponses = [];
+
+async function loadAdminSurveyResults() {
+    const tbody = document.getElementById("survey-responses-tbody");
+    const statSurveys = document.getElementById("stat-surveys");
+    const summaryCards = document.getElementById("survey-summary-cards");
+    
+    try {
+        const res = await fetch("/admin/survey-results");
+        if (!res.ok) {
+            if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-zinc-500">No se pudieron cargar los resultados de la encuesta.</td></tr>`;
+            return;
+        }
+
+        const data = await res.json();
+        const total = data.total || 0;
+        const responses = data.responses || [];
+        window.adminSurveyResponses = responses;
+
+        if (statSurveys) statSurveys.textContent = total;
+
+        if (!tbody) return;
+
+        if (responses.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-zinc-500">Todavía no hay respuestas registradas en la encuesta comunitaria.</td></tr>`;
+            if (summaryCards) summaryCards.classList.add("hidden");
+            return;
+        }
+
+        // Metrics aggregation
+        const committeeCounts = {};
+        const durationCounts = {};
+        const accessCounts = {};
+
+        responses.forEach(r => {
+            if (r.first_committee) committeeCounts[r.first_committee] = (committeeCounts[r.first_committee] || 0) + 1;
+            if (r.duration) durationCounts[r.duration] = (durationCounts[r.duration] || 0) + 1;
+            if (r.access_model) accessCounts[r.access_model] = (accessCounts[r.access_model] || 0) + 1;
+        });
+
+        const getTopKey = (obj) => {
+            const keys = Object.keys(obj);
+            if (keys.length === 0) return "-";
+            return keys.reduce((a, b) => obj[a] > obj[b] ? a : b);
+        };
+
+        const topCommittee = getTopKey(committeeCounts);
+        const topDuration = getTopKey(durationCounts);
+        const topAccess = getTopKey(accessCounts);
+
+        if (summaryCards) {
+            summaryCards.classList.remove("hidden");
+            const elTopComm = document.getElementById("survey-top-committee");
+            const elTopDur = document.getElementById("survey-top-duration");
+            const elTopAcc = document.getElementById("survey-top-access");
+            if (elTopComm) elTopComm.textContent = topCommittee || "-";
+            if (elTopDur) elTopDur.textContent = topDuration || "-";
+            if (elTopAcc) elTopAcc.textContent = topAccess || "-";
+        }
+
+        tbody.innerHTML = "";
+        responses.forEach((resp, idx) => {
+            const tr = document.createElement("tr");
+            tr.className = "hover:bg-zinc-800/30 transition border-b border-zinc-800/60";
+
+            // Contact string
+            let contactInfo = `<div class="font-bold text-zinc-100">${escapeHtml(resp.full_name || "Anónimo")}</div>`;
+            contactInfo += `<div class="text-xs text-sky-400 font-mono">${escapeHtml(resp.email || "")}</div>`;
+            if (resp.phone) {
+                contactInfo += `<div class="text-[11px] text-zinc-400">📱 ${escapeHtml(resp.phone)}</div>`;
+            }
+
+            // Role / link
+            const roleBadge = resp.role_relationship 
+                ? `<span class="inline-block px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-950/60 text-amber-300 border border-amber-800/50">${escapeHtml(resp.role_relationship)}</span>`
+                : `<span class="text-zinc-500 text-xs">-</span>`;
+
+            // Committees
+            let commHtml = `<div class="text-xs font-semibold text-zinc-200">1° ${escapeHtml(resp.first_committee || 'N/A')}</div>`;
+            if (resp.second_committee) {
+                commHtml += `<div class="text-[11px] text-zinc-400">2° ${escapeHtml(resp.second_committee)}</div>`;
+            }
+
+            // Priority tasks
+            let tasksHtml = '<span class="text-zinc-500 text-xs">Sin especificar</span>';
+            if (Array.isArray(resp.priority_tasks) && resp.priority_tasks.length > 0) {
+                tasksHtml = `<ul class="list-disc list-inside text-xs text-zinc-300 space-y-0.5">` + 
+                    resp.priority_tasks.slice(0, 2).map(t => `<li class="truncate max-w-xs" title="${escapeHtml(t)}">${escapeHtml(t)}</li>`).join('') +
+                    (resp.priority_tasks.length > 2 ? `<li class="text-[10px] text-amber-400 font-semibold">+${resp.priority_tasks.length - 2} más...</li>` : '') +
+                    `</ul>`;
+            }
+
+            tr.innerHTML = `
+                <td class="py-3.5 pr-3">${contactInfo}</td>
+                <td class="py-3.5 pr-3">${roleBadge}</td>
+                <td class="py-3.5 pr-3">${commHtml}</td>
+                <td class="py-3.5 pr-3">${tasksHtml}</td>
+                <td class="py-3.5 pr-3 text-xs text-zinc-400 whitespace-nowrap">${resp.created_at || '-'}</td>
+                <td class="py-3.5 text-right whitespace-nowrap">
+                    <button type="button" onclick="openSurveyDetailModal(${idx})" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800/70 transition shadow-sm">
+                        Ver Respuestas
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+    } catch (err) {
+        console.error("Error al cargar respuestas de la encuesta:", err);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-rose-400">Error al cargar datos de encuesta.</td></tr>`;
+    }
+}
+
+function openSurveyDetailModal(index) {
+    const item = window.adminSurveyResponses[index];
+    if (!item) return;
+
+    const modal = document.getElementById("survey-detail-modal");
+    const title = document.getElementById("survey-modal-title");
+    const subtitle = document.getElementById("survey-modal-subtitle");
+    const body = document.getElementById("survey-modal-body");
+
+    title.textContent = `Encuesta: ${item.full_name || "Participante"}`;
+    subtitle.textContent = `Registrada el ${item.created_at || 'Fecha desconocida'} • ${item.email || ''} ${item.phone ? '• Tel: ' + item.phone : ''}`;
+
+    const renderList = (arr) => {
+        if (!Array.isArray(arr) || arr.length === 0) return '<span class="text-zinc-500 italic">No especificado</span>';
+        return `<ul class="list-disc list-inside space-y-1 text-zinc-200">${arr.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>`;
+    };
+
+    body.innerHTML = `
+        <!-- Bloque Contacto & Rol -->
+        <div class="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800">
+            <h4 class="text-xs uppercase font-extrabold tracking-wider text-amber-400 mb-2">👤 Datos & Rol en la Comunidad</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div><span class="text-zinc-400">Nombre:</span> <strong class="text-zinc-200">${escapeHtml(item.full_name || '')}</strong></div>
+                <div><span class="text-zinc-400">Email:</span> <strong class="text-zinc-200">${escapeHtml(item.email || '')}</strong></div>
+                <div><span class="text-zinc-400">Teléfono:</span> <strong class="text-zinc-200">${escapeHtml(item.phone || 'N/A')}</strong></div>
+                <div><span class="text-zinc-400">Vínculo / Rol:</span> <strong class="text-zinc-200">${escapeHtml(item.role_relationship || 'N/A')}</strong></div>
+                <div class="sm:col-span-2"><span class="text-zinc-400">Redes / Web:</span> ${item.social_link ? `<a href="${escapeHtml(item.social_link)}" target="_blank" class="text-sky-400 underline">${escapeHtml(item.social_link)}</a>` : '<span class="text-zinc-500">N/A</span>'}</div>
+            </div>
+        </div>
+
+        <!-- Bloque 1: Visión -->
+        <div class="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
+            <h4 class="text-xs uppercase font-extrabold tracking-wider text-amber-400">1. ¿Qué queremos que sea SYNTH ARGENTINA?</h4>
+            <div class="text-xs text-zinc-300">
+                <span class="text-zinc-400 font-semibold block mb-1">Pilares de identidad votados:</span>
+                ${renderList(item.vision_core)}
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                <div><span class="text-zinc-400">Modelo de acceso:</span> <strong class="text-zinc-200">${escapeHtml(item.access_model || 'N/A')}</strong></div>
+                <div><span class="text-zinc-400">Periodicidad:</span> <strong class="text-zinc-200">${escapeHtml(item.frequency || 'N/A')}</strong></div>
+            </div>
+        </div>
+
+        <!-- Bloque 2: Escala -->
+        <div class="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
+            <h4 class="text-xs uppercase font-extrabold tracking-wider text-amber-400">2. Escala de la 1ª Edición</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div><span class="text-zinc-400">Duración:</span> <strong class="text-zinc-200">${escapeHtml(item.duration || 'N/A')}</strong></div>
+                <div><span class="text-zinc-400">Convocatoria esperada:</span> <strong class="text-zinc-200">${escapeHtml(item.attendance_scale || 'N/A')}</strong></div>
+                <div><span class="text-zinc-400">Cantidad de stands:</span> <strong class="text-zinc-200">${escapeHtml(item.stands_count || 'N/A')}</strong></div>
+            </div>
+            <div class="text-xs text-zinc-300 pt-1">
+                <span class="text-zinc-400 font-semibold block mb-1">Tipo de espacio / locación:</span>
+                ${renderList(item.venue_type)}
+            </div>
+        </div>
+
+        <!-- Bloque 3: Involucramiento -->
+        <div class="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
+            <h4 class="text-xs uppercase font-extrabold tracking-wider text-amber-400">3. Involucramiento en la Organización</h4>
+            <div class="text-xs">
+                <span class="text-zinc-400">Nivel de compromiso:</span> <strong class="text-zinc-200">${escapeHtml(item.involvement_level || 'N/A')}</strong>
+            </div>
+            <div class="text-xs text-zinc-300">
+                <span class="text-zinc-400 font-semibold block mb-1">Disponibilidad horaria:</span>
+                ${renderList(item.availability_slots)}
+            </div>
+        </div>
+
+        <!-- Bloque 4: Aportes -->
+        <div class="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
+            <h4 class="text-xs uppercase font-extrabold tracking-wider text-amber-400">4. Aportes, Habilidades y Equipamiento</h4>
+            <div class="text-xs text-zinc-300">
+                <span class="text-zinc-400 font-semibold block mb-1">Habilidades profesionales ofrecidas:</span>
+                ${renderList(item.skills)}
+            </div>
+            <div class="text-xs text-zinc-300 pt-1">
+                <span class="text-zinc-400 font-semibold block mb-1">Equipamiento o recursos materiales:</span>
+                ${renderList(item.equipment_resources)}
+            </div>
+            ${item.equipment_details ? `<div class="text-xs text-zinc-300 pt-1"><span class="text-zinc-400 font-semibold">Detalle de equipamiento:</span> <p class="mt-1 bg-zinc-900 p-2.5 rounded-lg border border-zinc-800 text-zinc-200">${escapeHtml(item.equipment_details)}</p></div>` : ''}
+        </div>
+
+        <!-- Bloque 5: Comisiones -->
+        <div class="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
+            <h4 class="text-xs uppercase font-extrabold tracking-wider text-amber-400">5. División de Áreas de Trabajo</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div><span class="text-zinc-400">1ª Comisión de interés:</span> <strong class="text-amber-400 font-bold">${escapeHtml(item.first_committee || 'N/A')}</strong></div>
+                <div><span class="text-zinc-400">2ª Comisión alternativa:</span> <strong class="text-zinc-200">${escapeHtml(item.second_committee || 'N/A')}</strong></div>
+            </div>
+            <div class="text-xs text-zinc-300 pt-1">
+                <span class="text-zinc-400 font-semibold block mb-1">Herramientas de coordinación sugeridas:</span>
+                ${renderList(item.coordination_tools)}
+            </div>
+        </div>
+
+        <!-- Bloque 6: Tareas Prioritarias -->
+        <div class="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
+            <h4 class="text-xs uppercase font-extrabold tracking-wider text-amber-400">6. Prioridad Sprint Inicial & Sugerencias</h4>
+            <div class="text-xs text-zinc-300">
+                <span class="text-zinc-400 font-semibold block mb-1">Top 3 tareas prioritarias seleccionadas:</span>
+                ${renderList(item.priority_tasks)}
+            </div>
+            ${item.ideas_suggestions ? `<div class="text-xs text-zinc-300 pt-1"><span class="text-zinc-400 font-semibold">Ideas y comentarios adicionales:</span> <p class="mt-1 bg-zinc-900 p-2.5 rounded-lg border border-zinc-800 text-zinc-200 italic whitespace-pre-wrap">"${escapeHtml(item.ideas_suggestions)}"</p></div>` : ''}
+        </div>
+    `;
+
+    modal.classList.remove("hidden");
+}
+
+function closeSurveyDetailModal() {
+    const modal = document.getElementById("survey-detail-modal");
+    if (modal) modal.classList.add("hidden");
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }

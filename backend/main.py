@@ -37,7 +37,7 @@ def normalize_gallery(gallery_raw):
     return normalized
 
 from backend.database import engine, get_db, Base
-from backend.models import User, BrandProfile, MusicianProfile, CollaboratorProfile, Donation
+from backend.models import User, BrandProfile, MusicianProfile, CollaboratorProfile, Donation, SurveyResponse
 from backend.auth import (
     create_access_token, 
     verify_google_token, 
@@ -115,6 +115,42 @@ class CollaboratorProfileRequest(BaseModel):
 
 class DonationRequest(BaseModel):
     amount: float
+
+class SurveySubmitRequest(BaseModel):
+    full_name: str
+    email: str
+    phone: Optional[str] = ""
+    social_link: Optional[str] = ""
+    role_relationship: Optional[str] = ""
+
+    # Bloque 1: Visión
+    vision_core: Optional[List[str]] = []
+    access_model: Optional[str] = ""
+    frequency: Optional[str] = ""
+
+    # Bloque 2: Escala
+    duration: Optional[str] = ""
+    attendance_scale: Optional[str] = ""
+    stands_count: Optional[str] = ""
+    venue_type: Optional[List[str]] = []
+
+    # Bloque 3: Involucramiento
+    involvement_level: Optional[str] = ""
+    availability_slots: Optional[List[str]] = []
+
+    # Bloque 4: Aportes y Recursos
+    skills: Optional[List[str]] = []
+    equipment_resources: Optional[List[str]] = []
+    equipment_details: Optional[str] = ""
+
+    # Bloque 5: Comisiones
+    first_committee: Optional[str] = ""
+    second_committee: Optional[str] = ""
+    coordination_tools: Optional[List[str]] = []
+
+    # Bloque 6: Tareas prioritarias e ideas
+    priority_tasks: Optional[List[str]] = []
+    ideas_suggestions: Optional[str] = ""
 
 # --- Authentication Routes (Dual Decorators for Vercel Serverless) ---
 
@@ -469,6 +505,7 @@ def get_admin_stats(current_user: User = Depends(get_current_user), db: Session 
     total_brands = db.query(BrandProfile).count()
     total_musicians = db.query(MusicianProfile).count()
     total_collaborators = db.query(CollaboratorProfile).count()
+    total_surveys = db.query(SurveyResponse).count()
     
     total_space = db.query(func.sum(BrandProfile.space_requested)).scalar() or 0.0
     total_donations = db.query(func.sum(Donation.amount)).filter(Donation.status == "completed").scalar() or 0.0
@@ -478,6 +515,7 @@ def get_admin_stats(current_user: User = Depends(get_current_user), db: Session 
         "total_brands": total_brands,
         "total_musicians": total_musicians,
         "total_collaborators": total_collaborators,
+        "total_surveys": total_surveys,
         "total_space_requested_m2": total_space,
         "total_donated_ars": total_donations
     }
@@ -566,6 +604,97 @@ def reject_user(user_id: int, current_user: User = Depends(get_current_user), db
     db.commit()
     return {"message": f"Aprobación de {user.email} revocada"}
 
+# --- Encuesta Comunitaria API ---
+
+@app.post("/api/survey/submit")
+@app.post("/survey/submit")
+def submit_survey(
+    survey_req: SurveySubmitRequest,
+    db: Session = Depends(get_db),
+    session_token: Optional[str] = Cookie(None)
+):
+    """Submits a response to the community survey (open to logged-in users and public community visitors)."""
+    user_id = None
+    if session_token:
+        try:
+            from backend.auth import decode_access_token
+            payload = decode_access_token(session_token)
+            if payload:
+                user = db.query(User).filter(User.email == payload.get("email")).first()
+                if user:
+                    user_id = user.id
+        except Exception:
+            pass
+
+    response_entry = SurveyResponse(
+        user_id=user_id,
+        full_name=survey_req.full_name.strip(),
+        email=survey_req.email.strip().lower(),
+        phone=survey_req.phone.strip() if survey_req.phone else "",
+        social_link=survey_req.social_link.strip() if survey_req.social_link else "",
+        role_relationship=survey_req.role_relationship or "",
+        vision_core=json.dumps(survey_req.vision_core or []),
+        access_model=survey_req.access_model or "",
+        frequency=survey_req.frequency or "",
+        duration=survey_req.duration or "",
+        attendance_scale=survey_req.attendance_scale or "",
+        stands_count=survey_req.stands_count or "",
+        venue_type=json.dumps(survey_req.venue_type or []),
+        involvement_level=survey_req.involvement_level or "",
+        availability_slots=json.dumps(survey_req.availability_slots or []),
+        skills=json.dumps(survey_req.skills or []),
+        equipment_resources=json.dumps(survey_req.equipment_resources or []),
+        equipment_details=survey_req.equipment_details or "",
+        first_committee=survey_req.first_committee or "",
+        second_committee=survey_req.second_committee or "",
+        coordination_tools=json.dumps(survey_req.coordination_tools or []),
+        priority_tasks=json.dumps(survey_req.priority_tasks or []),
+        ideas_suggestions=survey_req.ideas_suggestions or ""
+    )
+    db.add(response_entry)
+    db.commit()
+    db.refresh(response_entry)
+
+    return {"message": "¡Encuesta registrada con éxito! Muchas gracias por sumarte a construir Synth Argentina.", "id": response_entry.id}
+
+@app.get("/api/admin/survey-results")
+@app.get("/admin/survey-results")
+def get_survey_results(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Returns survey results and summary metrics for administrators."""
+    check_role(current_user, ["admin"])
+
+    responses = db.query(SurveyResponse).order_by(SurveyResponse.created_at.desc()).all()
+    results = []
+    for r in responses:
+        results.append({
+            "id": r.id,
+            "full_name": r.full_name,
+            "email": r.email,
+            "phone": r.phone,
+            "social_link": r.social_link,
+            "role_relationship": r.role_relationship,
+            "vision_core": json.loads(r.vision_core) if r.vision_core else [],
+            "access_model": r.access_model,
+            "frequency": r.frequency,
+            "duration": r.duration,
+            "attendance_scale": r.attendance_scale,
+            "stands_count": r.stands_count,
+            "venue_type": json.loads(r.venue_type) if r.venue_type else [],
+            "involvement_level": r.involvement_level,
+            "availability_slots": json.loads(r.availability_slots) if r.availability_slots else [],
+            "skills": json.loads(r.skills) if r.skills else [],
+            "equipment_resources": json.loads(r.equipment_resources) if r.equipment_resources else [],
+            "equipment_details": r.equipment_details,
+            "first_committee": r.first_committee,
+            "second_committee": r.second_committee,
+            "coordination_tools": json.loads(r.coordination_tools) if r.coordination_tools else [],
+            "priority_tasks": json.loads(r.priority_tasks) if r.priority_tasks else [],
+            "ideas_suggestions": r.ideas_suggestions,
+            "created_at": r.created_at.strftime("%d/%m/%Y %H:%M") if r.created_at else ""
+        })
+
+    return {"total": len(results), "responses": results}
+
 # --- Matriz de Arte Public API ---
 
 @app.get("/api/matrix/items")
@@ -640,6 +769,14 @@ def read_matriz():
     if matriz_file.exists():
         return FileResponse(str(matriz_file))
     return {"message": "Matriz de Arte"}
+
+@app.get("/encuesta")
+@app.get("/encuesta.html")
+def read_encuesta():
+    encuesta_file = SERVE_DIR / "encuesta.html"
+    if encuesta_file.exists():
+        return FileResponse(str(encuesta_file))
+    return {"message": "Encuesta Comunitaria Synth Argentina"}
 
 @app.get("/login")
 @app.get("/login.html")

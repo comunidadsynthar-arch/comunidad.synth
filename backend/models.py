@@ -75,3 +75,45 @@ class Donation(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="donations")
+
+class SurveyResponse(Base):
+    __tablename__ = "survey_responses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Optional if visitor is not logged in
+    full_name = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    phone = Column(String, nullable=True)
+    social_link = Column(String, nullable=True)
+    role_relationship = Column(String, nullable=True)  # e.g., Músico, Luthier, Docente, etc.
+
+    # Bloque 1: Visión e Identidad
+    vision_core = Column(String, nullable=True)  # JSON list
+    access_model = Column(String, nullable=True)
+    frequency = Column(String, nullable=True)
+
+    # Bloque 2: Escala
+    duration = Column(String, nullable=True)
+    attendance_scale = Column(String, nullable=True)
+    stands_count = Column(String, nullable=True)
+    venue_type = Column(String, nullable=True)  # JSON list
+
+    # Bloque 3: Involucramiento
+    involvement_level = Column(String, nullable=True)
+    availability_slots = Column(String, nullable=True)  # JSON list
+
+    # Bloque 4: Aportes y Recursos
+    skills = Column(String, nullable=True)  # JSON list
+    equipment_resources = Column(String, nullable=True)  # JSON list
+    equipment_details = Column(String, nullable=True)
+
+    # Bloque 5: Comisiones de trabajo
+    first_committee = Column(String, nullable=True)
+    second_committee = Column(String, nullable=True)
+    coordination_tools = Column(String, nullable=True)  # JSON list
+
+    # Bloque 6: Tareas urgentes e ideas
+    priority_tasks = Column(String, nullable=True)  # JSON list of 3 items
+    ideas_suggestions = Column(String, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)

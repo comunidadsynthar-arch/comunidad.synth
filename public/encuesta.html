@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-zinc-950 text-zinc-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encuesta Comunitaria · Synth Argentina ⚡🎛️</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .synth-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="min-h-full flex flex-col synth-grid bg-[#07070b] text-zinc-100 font-sans antialiased">
+
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-zinc-800/80 bg-zinc-950/85 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto px-4 py-3.5 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <a href="/" class="flex items-center gap-2.5 group">
+                    <img src="/static/logo.jpg" alt="Logo" class="w-9 h-9 rounded-full border border-sky-500/60 group-hover:scale-105 transition">
+                    <span class="font-extrabold tracking-wider text-sky-400 text-sm sm:text-base">SYNTH ARGENTINA</span>
+                </a>
+                <span class="hidden sm:inline text-xs font-bold px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800/60 uppercase">
+                    Encuesta 2026
+                </span>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <!-- Share Link Button -->
+                <button type="button" onclick="copySurveyLink()" class="bg-zinc-900 hover:bg-zinc-800 text-sky-400 border border-sky-500/40 text-xs font-bold py-1.5 px-3 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <span id="copy-btn-icon">🔗</span>
+                    <span id="copy-btn-text">Copiar Link</span>
+                </button>
+                <a href="/dashboard" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold py-1.5 px-3.5 rounded-lg transition shadow-md shadow-sky-950">
+                    Panel
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-4xl mx-auto px-4 py-8 sm:py-12 w-full">
+
+        <!-- Hero Header -->
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-950/60 border border-sky-800/60 text-sky-400 text-xs font-bold uppercase tracking-wider mb-3">
+                <span>⚡</span> Consulta Abierta a la Comunidad
+            </div>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                Construyamos <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-purple-400 to-pink-400">SYNTH ARGENTINA</span>
+            </h1>
+            <p class="mt-3 text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+                Queremos conocer tu visión para definir juntos el formato, la escala, las comisiones de trabajo y las tareas iniciales del primer gran encuentro nacional de sintetizadores.
+            </p>
+
+            <!-- Quick Share Banner -->
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <button type="button" onclick="shareWhatsApp()" class="bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-bold py-2 px-4 rounded-xl transition flex items-center gap-2 border border-emerald-500/40 shadow-md">
+                    <span>💬</span> <span>Compartir en WhatsApp</span>
+                </button>
+                <button type="button" onclick="copySurveyLink()" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold py-2 px-4 rounded-xl transition flex items-center gap-2 border border-zinc-700 shadow-md">
+                    <span>📋</span> <span>Copiar enlace para redes</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Form Success State (Hidden by default) -->
+        <div id="survey-success-card" class="hidden bg-zinc-900/90 border border-emerald-500/60 rounded-3xl p-8 sm:p-12 text-center shadow-2xl backdrop-blur-md">
+            <div class="w-16 h-16 bg-emerald-950 text-emerald-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-emerald-700">
+                ✓
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-black text-white">¡Encuesta Enviada con Éxito!</h2>
+            <p class="mt-3 text-zinc-300 max-w-lg mx-auto text-sm sm:text-base leading-relaxed">
+                Muchas gracias por sumar tu voz. Procesaremos todas las respuestas para presentar las conclusiones en la primera reunión organizadora y poner en marcha las comisiones.
+            </p>
+            <div class="mt-8 flex flex-wrap justify-center gap-3">
+                <button type="button" onclick="shareWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition flex items-center gap-2 shadow-lg">
+                    <span>💬</span> Compartir encuesta con colegas
+                </button>
+                <a href="/dashboard" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition shadow-lg">
+                    Ir al Panel Comunitario
+                </a>
+                <a href="/matriz" class="bg-zinc-800 hover:bg-zinc-700 text-purple-300 font-bold py-2.5 px-5 rounded-xl text-xs transition border border-purple-800/60 shadow-lg">
+                    Explorar Matriz de Arte
+                </a>
+            </div>
+        </div>
+
+        <!-- Survey Form -->
+        <form id="survey-form" onsubmit="handleSurveySubmit(event)" class="space-y-8">
+
+            <!-- BLOQUE 0: Datos del Participante -->
+            <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 sm:p-8 backdrop-blur-sm">
+                <div class="flex items-center gap-3 border-b border-zinc-800 pb-3 mb-6">
+                    <span class="text-xl">👤</span>
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Tus Datos</h2>
+                        <p class="text-xs text-zinc-400">Para contactarte para las reuniones y comisiones.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">Nombre y Apellido / Proyecto Artístico *</label>
+                        <input type="text" id="resp-name" required placeholder="Ej. Juan Pérez / Modular Sessions" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-sky-500 text-zinc-100">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">Email de Contacto *</label>
+                        <input type="email" id="resp-email" required placeholder="tuemail@ejemplo.com" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-sky-500 text-zinc-100">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">WhatsApp / Teléfono</label>
+                        <input type="tel" id="resp-phone" placeholder="Ej. +54 9 11 1234-5678" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-sky-500 text-zinc-100">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">Instagram o Enlace a Web/Música</label>
+                        <input type="text" id="resp-social" placeholder="@tu_usuario o https://..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-sky-500 text-zinc-100">
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">¿Cuál es tu relación principal con los sintetizadores?</label>
+                        <select id="resp-role" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-sky-500 text-zinc-100">
+                            <option value="musician">Músico / Productor / Live Performer</option>
+                            <option value="brand">Fabricante de hardware / Luthier de sintes / Eurorack / Pedales</option>
+                            <option value="developer">Desarrollador de software / VSTs / Plugins / DSP</option>
+                            <option value="teacher">Docente / Divulgador de síntesis</option>
+                            <option value="technician">Técnico de sonido / Productor de eventos</option>
+                            <option value="enthusiast">Entusiasta / Coleccionista / Aficionado</option>
+                            <option value="creative">Diseñador / Comunicador / Audiovisual</option>
+                            <option value="other">Otro</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BLOQUE 1: ¿Qué queremos que sea SYNTH ARGENTINA? -->
+            <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 sm:p-8 backdrop-blur-sm">
+                <div class="flex items-center gap-3 border-b border-zinc-800 pb-3 mb-6">
+                    <span class="text-xl">🎯</span>
+                    <div>
+                        <div class="text-[10px] font-black uppercase tracking-wider text-sky-400">Punto 1</div>
+                        <h2 class="text-lg font-bold text-white">¿Qué queremos que sea SYNTH ARGENTINA?</h2>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-2">
+                            1.1. ¿Cuál debería ser el corazón del proyecto en su concepción? <span class="text-sky-400 font-normal">(Elegí hasta 2 opciones)</span>
+                        </label>
+                        <div class="space-y-2">
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="vision_core" value="feria_lutheria" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Feria & Luthería Nacional</strong>
+                                    <span class="text-xs text-zinc-400">Exposición de fabricantes locales de hardware, sintes modulares, pedales y desarrolladores DIY.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="vision_core" value="comunidad_encuentro" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Espacio de Encuentro & Comunidad</strong>
+                                    <span class="text-xs text-zinc-400">Conectar personas, mateada, intercambio de experiencias, compra/venta/canje de usados.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="vision_core" value="educacion_talleres" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Plataforma Formativa & Educativa</strong>
+                                    <span class="text-xs text-zinc-400">Clínicas magistrales, workshops de diseño sonoro y talleres prácticos de armado de circuitos.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="vision_core" value="festival_live_sets" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Festival & Shows en Vivo</strong>
+                                    <span class="text-xs text-zinc-400">Escenario continuo con Live Sets, experimentación analógica, visuales y jams colectivas.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="vision_core" value="hibrido_integral" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Formato Integral Híbrido</strong>
+                                    <span class="text-xs text-zinc-400">Combinación equilibrada de feria comercial diurna + talleres + shows en vivo.</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-2">
+                            1.2. ¿Qué modelo de acceso y sostenibilidad económica preferís para el público?
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <label class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="access_model" value="100_gratis" checked class="text-sky-500 focus:ring-0">
+                                <span class="text-xs text-zinc-300"><strong>100% Gratuito y Abierto</strong> (financiado por stands y sponsors)</span>
+                            </label>
+                            <label class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="access_model" value="entrada_popular" class="text-sky-500 focus:ring-0">
+                                <span class="text-xs text-zinc-300"><strong>Entrada Popular y Accesible</strong> (ej. 1 o 2 cafés para cubrir costos fijos)</span>
+                            </label>
+                            <label class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="access_model" value="escalonada" class="text-sky-500 focus:ring-0">
+                                <span class="text-xs text-zinc-300"><strong>Entrada Escalonada</strong> (gratis general + arancel para talleres específicos)</span>
+                            </label>
+                            <label class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="access_model" value="bono_contribucion" class="text-sky-500 focus:ring-0">
+                                <span class="text-xs text-zinc-300"><strong>Bono Contribución Voluntario</strong> (libre con opción de colaborar)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-2">
+                            1.3. ¿Con qué periodicidad visualizás la iniciativa a futuro?
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <label class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="frequency" value="anual_insignia" checked class="text-sky-500 focus:ring-0">
+                                <span class="text-xs text-zinc-300">Un gran evento anual insignia</span>
+                            </label>
+                            <label class="flex items-center gap-2.5 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="frequency" value="anual_mas_bimensuales" class="text-sky-500 focus:ring-0">
+                                <span class="text-xs text-zinc-300">Gran evento anual + pequeños meetups/jams cada 2 meses</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BLOQUE 2: ¿Qué escala debería tener la primera edición? -->
+            <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 sm:p-8 backdrop-blur-sm">
+                <div class="flex items-center gap-3 border-b border-zinc-800 pb-3 mb-6">
+                    <span class="text-xl">📏</span>
+                    <div>
+                        <div class="text-[10px] font-black uppercase tracking-wider text-sky-400">Punto 2</div>
+                        <h2 class="text-lg font-bold text-white">¿Qué escala debería tener la primera edición?</h2>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-2">2.1. Duración ideal del evento debut</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <label class="flex flex-col p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <input type="radio" name="duration" value="1_dia" checked class="text-sky-500 focus:ring-0">
+                                    <strong class="text-xs text-zinc-200">1 Día (Recomendado)</strong>
+                                </div>
+                                <span class="text-[11px] text-zinc-400">Sábado intensivo 12 a 22 hs. Máxima energía y menor costo.</span>
+                            </label>
+                            <label class="flex flex-col p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <input type="radio" name="duration" value="2_dias" class="text-sky-500 focus:ring-0">
+                                    <strong class="text-xs text-zinc-200">2 Días (Fin de Semana)</strong>
+                                </div>
+                                <span class="text-[11px] text-zinc-400">Sábado y Domingo. Más grilla, pero mayor presupuesto y esfuerzo.</span>
+                            </label>
+                            <label class="flex flex-col p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <input type="radio" name="duration" value="doble_tarde_noche" class="text-sky-500 focus:ring-0">
+                                    <strong class="text-xs text-zinc-200">Jornada Tarde / Noche</strong>
+                                </div>
+                                <span class="text-[11px] text-zinc-400">Tarde de feria + noche de Live Sets en club/sala.</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-200 mb-2">2.2. Afluencia esperada de público</label>
+                            <select id="resp-attendance" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-xs focus:outline-none focus:border-sky-500 text-zinc-100">
+                                <option value="150_300">Escala Boutique (150 a 300 personas simultáneas)</option>
+                                <option value="400_800" selected>Escala Media (400 a 800 personas simultáneas)</option>
+                                <option value="1000_mas">Escala Masiva (1000+ personas)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-200 mb-2">2.3. Cantidad de stands de marcas</label>
+                            <select id="resp-stands" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-xs focus:outline-none focus:border-sky-500 text-zinc-100">
+                                <option value="10_15">10 a 15 stands (fabricantes clave de hardware)</option>
+                                <option value="20_30" selected>20 a 30 stands (fabricantes + pedales + tiendas + usados)</option>
+                                <option value="35_mas">35+ stands (marcas nacionales, importadas y escuelas)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-2">
+                            2.4. ¿Qué tipo de locación te parece más conveniente? <span class="text-sky-400 font-normal">(Podés marcar varias)</span>
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="venue_type" value="cc_autogestionado" class="rounded text-sky-500 focus:ring-0">
+                                <span>Centro Cultural autogestionado / Cooperativa</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="venue_type" value="cc_publico" class="rounded text-sky-500 focus:ring-0">
+                                <span>Centro Cultural público (ej. Recoleta, Conti)</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="venue_type" value="galpon_industrial" class="rounded text-sky-500 focus:ring-0">
+                                <span>Galpón industrial / Nave cultural</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="venue_type" value="universidad" class="rounded text-sky-500 focus:ring-0">
+                                <span>Espacio universitario (UNTREF, UBA, etc.)</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="venue_type" value="sala_conciertos" class="rounded text-sky-500 focus:ring-0">
+                                <span>Club o sala de conciertos con sonido preinstalado</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BLOQUE 3: ¿Quiénes quieren involucrarse activamente en la organización? -->
+            <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 sm:p-8 backdrop-blur-sm">
+                <div class="flex items-center gap-3 border-b border-zinc-800 pb-3 mb-6">
+                    <span class="text-xl">🤝</span>
+                    <div>
+                        <div class="text-[10px] font-black uppercase tracking-wider text-sky-400">Punto 3</div>
+                        <h2 class="text-lg font-bold text-white">Involucramiento Activo en la Organización</h2>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-2">3.1. ¿Cuál es tu nivel de disponibilidad y compromiso real?</label>
+                        <div class="space-y-2">
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="involvement_level" value="core_team" class="mt-1 text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-sky-400 block">Equipo Núcleo (Core Team)</strong>
+                                    <span class="text-xs text-zinc-400">Liderar un área, participar en reuniones semanales y tomar decisiones operativas (4 a 8 hs semanales).</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="involvement_level" value="colaborador_activo" checked class="mt-1 text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-emerald-400 block">Colaborador Activo de Comisión</strong>
+                                    <span class="text-xs text-zinc-400">Realizar tareas puntuales de mi área durante las semanas previas (2 a 4 hs semanales).</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="involvement_level" value="voluntario_dia_d" class="mt-1 text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-purple-400 block">Voluntario de Producción el Día del Evento</strong>
+                                    <span class="text-xs text-zinc-400">Apoyo en montaje, acreditaciones, asistencia técnica a stands o escenario durante la jornada.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="involvement_level" value="asesor_contactos" class="mt-1 text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-amber-400 block">Asesor / Red de Contactos</strong>
+                                    <span class="text-xs text-zinc-400">Brindar contactos, consejos técnicos o institucionales sin carga operativa fija.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="radio" name="involvement_level" value="solo_participante" class="mt-1 text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-300 block">Solo Participante</strong>
+                                    <span class="text-xs text-zinc-400">Me interesa ir como público, artista o marca expositora, pero no en la organización.</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-2">3.2. Disponibilidad horaria y modalidad para coordinar</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="availability_slots" value="semana_noche" class="rounded text-sky-500 focus:ring-0">
+                                <span>Días de semana tarde/noche (después de las 18:30)</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="availability_slots" value="fines_de_semana" class="rounded text-sky-500 focus:ring-0">
+                                <span>Fines de semana</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="availability_slots" value="meet_virtual" checked class="rounded text-sky-500 focus:ring-0">
+                                <span>Reuniones virtuales (Google Meet / Discord)</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="availability_slots" value="presencial_caba" class="rounded text-sky-500 focus:ring-0">
+                                <span>Encuentros presenciales en CABA</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BLOQUE 4: ¿Qué puede aportar cada uno? -->
+            <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 sm:p-8 backdrop-blur-sm">
+                <div class="flex items-center gap-3 border-b border-zinc-800 pb-3 mb-6">
+                    <span class="text-xl">🧰</span>
+                    <div>
+                        <div class="text-[10px] font-black uppercase tracking-wider text-sky-400">Punto 4</div>
+                        <h2 class="text-lg font-bold text-white">¿Qué puede aportar cada uno? (Habilidades y Recursos)</h2>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-2">4.1. Habilidades u oficios que podés sumar <span class="text-sky-400 font-normal">(Marcá todas las que apliquen)</span></label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="skills" value="produccion_audio" class="rounded text-sky-500 focus:ring-0">
+                                <span>Producción técnica, sonido en vivo y consolas</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="skills" value="electricidad" class="rounded text-sky-500 focus:ring-0">
+                                <span>Electricidad y distribución de potencia</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="skills" value="diseno_grafico" class="rounded text-sky-500 focus:ring-0">
+                                <span>Diseño gráfico, cartelería y branding</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="skills" value="audiovisual_foto" class="rounded text-sky-500 focus:ring-0">
+                                <span>Fotografía, video y streaming</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="skills" value="prensa_redes" class="rounded text-sky-500 focus:ring-0">
+                                <span>Comunicación, prensa y manejo de redes</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="skills" value="gestion_legal" class="rounded text-sky-500 focus:ring-0">
+                                <span>Gestión legal, seguros y habilitaciones</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="skills" value="finanzas_sponsors" class="rounded text-sky-500 focus:ring-0">
+                                <span>Finanzas, presupuesto y captación de sponsors</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="skills" value="curaduria_talleres" class="rounded text-sky-500 focus:ring-0">
+                                <span>Curaduría artística y talleres formativos</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="skills" value="web_sistemas" class="rounded text-sky-500 focus:ring-0">
+                                <span>Desarrollo web, sistemas y software</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-2">4.2. Equipamiento o infraestructura que podés facilitar o gestionar</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="equipment" value="audio_consolas" class="rounded text-sky-500 focus:ring-0">
+                                <span>Consolas, cables, cajas directas (DIs)</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="equipment" value="pa_monitores" class="rounded text-sky-500 focus:ring-0">
+                                <span>Sistema de sonido PA / Monitores</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="equipment" value="proyectores_luces" class="rounded text-sky-500 focus:ring-0">
+                                <span>Proyector, pantallas o luces LED</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="equipment" value="electricidad_zapatillas" class="rounded text-sky-500 focus:ring-0">
+                                <span>Zapatillas eléctricas reforzadas / prolongadores</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="equipment" value="mesas_caballetes" class="rounded text-sky-500 focus:ring-0">
+                                <span>Mesas, caballetes o sillas para stands</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="equipment" value="vehiculo_flete" class="rounded text-sky-500 focus:ring-0">
+                                <span>Vehículo / flete para traslados</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="equipment" value="contacto_locacion" class="rounded text-sky-500 focus:ring-0">
+                                <span>Contacto directo con locaciones o salas</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">Detalles de equipos u otros recursos que puedas sumar (Opcional):</label>
+                        <input type="text" id="resp-equip-details" placeholder="Ej. Tengo consola Yamaha 12 canales y 4 DI boxes Behringer..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-xs focus:outline-none focus:border-sky-500 text-zinc-100">
+                    </div>
+                </div>
+            </div>
+
+            <!-- BLOQUE 5: ¿Cómo dividimos las áreas de trabajo? -->
+            <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 sm:p-8 backdrop-blur-sm">
+                <div class="flex items-center gap-3 border-b border-zinc-800 pb-3 mb-6">
+                    <span class="text-xl">🏛️</span>
+                    <div>
+                        <div class="text-[10px] font-black uppercase tracking-wider text-sky-400">Punto 5</div>
+                        <h2 class="text-lg font-bold text-white">¿Cómo dividimos las áreas de trabajo?</h2>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-200 mb-1">Tu 1ª preferencia de comisión:</label>
+                            <select id="resp-comm-1" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-xs focus:outline-none focus:border-sky-500 text-zinc-100">
+                                <option value="produccion">Comisión 1: Producción General & Locación</option>
+                                <option value="expositores" selected>Comisión 2: Expositores & Marcas (Feria)</option>
+                                <option value="contenido">Comisión 3: Contenido, Talleres & Escenario</option>
+                                <option value="comunicacion">Comisión 4: Comunicación, Prensa & Diseño</option>
+                                <option value="finanzas">Comisión 5: Finanzas, Presupuesto & Sponsors</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-200 mb-1">Tu 2ª preferencia de comisión:</label>
+                            <select id="resp-comm-2" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-xs focus:outline-none focus:border-sky-500 text-zinc-100">
+                                <option value="contenido" selected>Comisión 3: Contenido, Talleres & Escenario</option>
+                                <option value="produccion">Comisión 1: Producción General & Locación</option>
+                                <option value="expositores">Comisión 2: Expositores & Marcas (Feria)</option>
+                                <option value="comunicacion">Comisión 4: Comunicación, Prensa & Diseño</option>
+                                <option value="finanzas">Comisión 5: Finanzas, Presupuesto & Sponsors</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-2">Herramientas de coordinación digital que preferís usar:</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="tools" value="whatsapp" checked class="rounded text-sky-500 focus:ring-0">
+                                <span>Grupo WhatsApp general + subgrupos de comisiones</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="tools" value="discord" class="rounded text-sky-500 focus:ring-0">
+                                <span>Servidor de Discord con canales temáticos</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="tools" value="trello_notion" checked class="rounded text-sky-500 focus:ring-0">
+                                <span>Tablero visual Trello / Notion para tareas</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-800/80 bg-zinc-950/40 text-xs text-zinc-300 cursor-pointer hover:border-zinc-700">
+                                <input type="checkbox" name="tools" value="gdrive" checked class="rounded text-sky-500 focus:ring-0">
+                                <span>Carpeta compartida Google Drive</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BLOQUE 6: ¿Qué tareas tenemos que hacer primero? -->
+            <div class="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 sm:p-8 backdrop-blur-sm">
+                <div class="flex items-center gap-3 border-b border-zinc-800 pb-3 mb-6">
+                    <span class="text-xl">⏱️</span>
+                    <div>
+                        <div class="text-[10px] font-black uppercase tracking-wider text-sky-400">Punto 6</div>
+                        <h2 class="text-lg font-bold text-white">¿Qué tareas tenemos que hacer primero? (Sprint Inicial)</h2>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-xs font-bold text-zinc-200">
+                                6.1. Seleccioná exactamente las 3 tareas que debemos resolver con máxima URGENCIA:
+                            </label>
+                            <span id="priority-counter" class="text-xs font-bold bg-sky-950 text-sky-400 px-2 py-0.5 rounded border border-sky-800">
+                                0 / 3 seleccionadas
+                            </span>
+                        </div>
+                        <div class="space-y-2" id="priority-checkboxes-group">
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="priority_tasks" value="confirmar_locacion" onchange="updatePriorityCounter()" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Confirmar y señar la locación física</strong>
+                                    <span class="text-xs text-zinc-400">Sin lugar fijo no hay fecha cierta para convocar marcas ni armar la grilla de shows.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="priority_tasks" value="presupuesto_base" onchange="updatePriorityCounter()" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Calcular el presupuesto base de costo mínimo</strong>
+                                    <span class="text-xs text-zinc-400">Saber cuánto dinero exacto se necesita para abrir las puertas (seguros, sonido, fletes).</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="priority_tasks" value="sondeo_marcas" onchange="updatePriorityCounter()" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Lanzar sondeo preliminar a marcas y fabricantes</strong>
+                                    <span class="text-xs text-zinc-400">Saber cuántos stands van a participar y qué requerimientos de mesas/tomas tienen.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="priority_tasks" value="identidad_visual" onchange="updatePriorityCounter()" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Cerrar la identidad visual oficial</strong>
+                                    <span class="text-xs text-zinc-400">Logotipo final, paleta y gráfica oficial para empezar a comunicar con seriedad en redes.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="priority_tasks" value="convocatoria_publica" onchange="updatePriorityCounter()" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Lanzar la convocatoria pública abierta</strong>
+                                    <span class="text-xs text-zinc-400">Anunciar la iniciativa y convocar abiertamente a la comunidad en redes sociales.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="priority_tasks" value="fijar_tarifas_stands" onchange="updatePriorityCounter()" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Fijar esquema económico de stands y accesos</strong>
+                                    <span class="text-xs text-zinc-400">Definir si el stand tiene costo, cuánto y cómo se financia la estructura.</span>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 cursor-pointer transition">
+                                <input type="checkbox" name="priority_tasks" value="cronograma_timeline" onchange="updatePriorityCounter()" class="mt-1 rounded text-sky-500 focus:ring-0">
+                                <div>
+                                    <strong class="text-xs sm:text-sm text-zinc-200 block">Armar cronograma hacia atrás (Timeline de producción)</strong>
+                                    <span class="text-xs text-zinc-400">Establecer hitos claros con fechas límite (D-90, D-60, D-30).</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-200 mb-1">
+                            6.2. ¿Alguna locación concreta que sugieras o una idea imperdible que no pueda faltar en Synth Argentina?
+                        </label>
+                        <textarea id="resp-suggestions" rows="3" placeholder="Contanos cualquier sugerencia, locación que conozcas, o propuesta que quieras que tengamos en cuenta..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 px-3 text-xs focus:outline-none focus:border-sky-500 text-zinc-100"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button & Disclaimer -->
+            <div class="pt-4 text-center">
+                <button type="submit" id="submit-btn" class="w-full sm:w-auto bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 hover:from-sky-400 hover:to-purple-500 text-zinc-950 font-black py-4 px-10 rounded-2xl transition shadow-xl shadow-sky-950 text-base tracking-wide flex items-center justify-center gap-2 mx-auto">
+                    <span>🚀</span> <span>Enviar Mis Respuestas a la Organización</span>
+                </button>
+                <p class="text-xs text-zinc-500 mt-3">
+                    Tus respuestas se integrarán al informe preliminar de la primera reunión organizadora.
+                </p>
+            </div>
+
+        </form>
+
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="survey-toast" class="fixed bottom-6 right-6 z-50 bg-zinc-900 border border-sky-500/50 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md hidden transition-all duration-300 flex items-center gap-2">
+        <span id="toast-icon">✅</span>
+        <span id="toast-msg">Mensaje</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800/80 bg-zinc-950 py-6 text-center text-zinc-500 text-xs mt-12">
+        ⚡ Synth Argentina 2026 · Construido comunitariamente.
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            checkLoggedInUser();
+        });
+
+        // Pre-fill user if logged in
+        async function checkLoggedInUser() {
+            try {
+                const res = await fetch("/auth/me");
+                if (res.ok) {
+                    const user = await res.json();
+                    if (user.name) document.getElementById("resp-name").value = user.name;
+                    if (user.email) document.getElementById("resp-email").value = user.email;
+                    if (user.role && user.role !== "pending") {
+                        const roleSelect = document.getElementById("resp-role");
+                        if (roleSelect) roleSelect.value = user.role;
+                    }
+                }
+            } catch (e) {
+                // Ignore if not logged in
+            }
+        }
+
+        // Limit priority tasks to 3
+        function updatePriorityCounter() {
+            const checked = document.querySelectorAll('input[name="priority_tasks"]:checked');
+            const counter = document.getElementById("priority-counter");
+            if (counter) {
+                counter.textContent = `${checked.length} / 3 seleccionadas`;
+                if (checked.length === 3) {
+                    counter.className = "text-xs font-bold bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-800";
+                } else if (checked.length > 3) {
+                    counter.className = "text-xs font-bold bg-rose-950 text-rose-400 px-2 py-0.5 rounded border border-rose-800";
+                } else {
+                    counter.className = "text-xs font-bold bg-sky-950 text-sky-400 px-2 py-0.5 rounded border border-sky-800";
+                }
+            }
+        }
+
+        // Copy survey URL to clipboard
+        function copySurveyLink() {
+            const url = window.location.origin + "/encuesta";
+            navigator.clipboard.writeText(url).then(() => {
+                showToast("¡Enlace copiado al portapapeles para compartir!", "success");
+                const btnText = document.getElementById("copy-btn-text");
+                const btnIcon = document.getElementById("copy-btn-icon");
+                if (btnText) btnText.textContent = "¡Copiado!";
+                if (btnIcon) btnIcon.textContent = "✓";
+                setTimeout(() => {
+                    if (btnText) btnText.textContent = "Copiar Link";
+                    if (btnIcon) btnIcon.textContent = "🔗";
+                }, 3000);
+            }).catch(() => {
+                showToast(url, "info");
+            });
+        }
+
+        // Share directly to WhatsApp
+        function shareWhatsApp() {
+            const url = window.location.origin + "/encuesta";
+            const text = `¡Hola! Te comparto la encuesta oficial para armar SYNTH ARGENTINA ⚡🎛️. Están consultando visión, escala y armado de comisiones. Sumá tu respuesta acá: ${url}`;
+            const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            window.open(waUrl, '_blank');
+        }
+
+        function showToast(msg, type = "success") {
+            const toast = document.getElementById("survey-toast");
+            const icon = document.getElementById("toast-icon");
+            const text = document.getElementById("toast-msg");
+            if (!toast) return;
+
+            icon.textContent = type === "success" ? "✅" : (type === "error" ? "❌" : "ℹ️");
+            text.textContent = msg;
+            toast.classList.remove("hidden");
+            setTimeout(() => {
+                toast.classList.add("hidden");
+            }, 4000);
+        }
+
+        // Handle Form Submission
+        async function handleSurveySubmit(e) {
+            e.preventDefault();
+
+            const name = document.getElementById("resp-name").value.trim();
+            const email = document.getElementById("resp-email").value.trim();
+            if (!name || !email) {
+                showToast("Por favor completá tu nombre y email", "error");
+                return;
+            }
+
+            // Gather checkboxes helpers
+            const getCheckedValues = (name) => Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(cb => cb.value);
+            const getRadioValue = (name) => {
+                const el = document.querySelector(`input[name="${name}"]:checked`);
+                return el ? el.value : "";
+            };
+
+            const payload = {
+                full_name: name,
+                email: email,
+                phone: document.getElementById("resp-phone").value.trim(),
+                social_link: document.getElementById("resp-social").value.trim(),
+                role_relationship: document.getElementById("resp-role").value,
+
+                // Bloque 1
+                vision_core: getCheckedValues("vision_core"),
+                access_model: getRadioValue("access_model"),
+                frequency: getRadioValue("frequency"),
+
+                // Bloque 2
+                duration: getRadioValue("duration"),
+                attendance_scale: document.getElementById("resp-attendance").value,
+                stands_count: document.getElementById("resp-stands").value,
+                venue_type: getCheckedValues("venue_type"),
+
+                // Bloque 3
+                involvement_level: getRadioValue("involvement_level"),
+                availability_slots: getCheckedValues("availability_slots"),
+
+                // Bloque 4
+                skills: getCheckedValues("skills"),
+                equipment_resources: getCheckedValues("equipment"),
+                equipment_details: document.getElementById("resp-equip-details").value.trim(),
+
+                // Bloque 5
+                first_committee: document.getElementById("resp-comm-1").value,
+                second_committee: document.getElementById("resp-comm-2").value,
+                coordination_tools: getCheckedValues("tools"),
+
+                // Bloque 6
+                priority_tasks: getCheckedValues("priority_tasks"),
+                ideas_suggestions: document.getElementById("resp-suggestions").value.trim()
+            };
+
+            const submitBtn = document.getElementById("submit-btn");
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = "<span>⏳</span> <span>Enviando respuestas...</span>";
+
+            try {
+                const res = await fetch("/api/survey/submit", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    document.getElementById("survey-form").classList.add("hidden");
+                    const successCard = document.getElementById("survey-success-card");
+                    successCard.classList.remove("hidden");
+                    window.scrollTo({ top: successCard.offsetTop - 50, behavior: "smooth" });
+                } else {
+                    const err = await res.json();
+                    showToast(err.detail || "Error al enviar la encuesta", "error");
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = "<span>🚀</span> <span>Enviar Mis Respuestas a la Organización</span>";
+                }
+            } catch (err) {
+                console.error("Error:", err);
+                showToast("Error de conexión al servidor", "error");
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = "<span>🚀</span> <span>Enviar Mis Respuestas a la Organización</span>";
+            }
+        }
+    </script>
+</body>
+</html>
