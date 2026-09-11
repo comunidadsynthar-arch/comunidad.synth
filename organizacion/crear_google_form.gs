@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SYNTH ARGENTINA ⚡🎛️🇦🇷
  * Script de Google Apps Script para generar automáticamente la Encuesta en Google Forms
  * 
@@ -28,8 +28,8 @@ function crearEncuestaSynthArgentina() {
   form.addTextItem().setTitle('Teléfono / WhatsApp').setHelpText('Opcional, para sumarte al grupo de coordinación operativa.');
   form.addTextItem().setTitle('Instagram / Web / Proyecto sonoro').setHelpText('Opcional');
 
-  var roleItem = form.addMultipleChoiceItem();
-  roleItem.setTitle('¿Cuál es tu vínculo o rol principal en la comunidad?')
+  var roleItem = form.addCheckboxItem();
+  roleItem.setTitle('¿Cuál es tu vínculo o rol principal en la comunidad? (Podés marcar más de uno)')
     .setChoiceValues([
       'Músico / Productor / Artista en vivo',
       'Fabricante de sintetizadores o efectos / Luthería electrónica',
